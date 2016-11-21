@@ -21,12 +21,13 @@ void device_del(int handle);
 /* 从section_no扇区开始，读取count个扇区的内容到buf中。
    返回读取的扇区数。错误返回-1
  */
-size_t device_read(int handle, size_t section_no, size_t count, char* buf);
+int device_read(int handle, int section_no, int count, char* buf);
 
 /* 将buf中内容写入到从section_no扇区开始，count个扇区中
    返回写入的扇区数。错误返回-1
  */
-size_t decice_write(int handle, size_t section_no, size_t count, char* buf);
+int device_write(int handle, int section_no, int count, const char* buf);
 
+int device_section_count(int handle);
 
 #endif /* __DEVICE_IO__ */

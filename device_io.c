@@ -6,7 +6,7 @@
 
 struct _device_s{
     FILE* fp;
-    size_t section_count;
+    int section_count;
 };
 
 #define MAX_DEVICE_COUNT 1024
@@ -18,7 +18,7 @@ int device_add(const char* path)
         if (device_handle[i] == NULL) {
             device_handle[i] = FT_NEW(struct _device_s, 1);
 
-            device_handle[i]->fp = fopen(path, "wb");
+            device_handle[i]->fp = fopen(path, "r+b");
             device_handle[i]->section_count = ft_filesize(device_handle[i]->fp) / 512;
 
             return i;
@@ -46,7 +46,7 @@ static struct _device_s* handle_to_struct(int handle)
     }
 }
 
-size_t device_read(int handle, size_t section_no, size_t count, char* buf)
+int device_read(int handle, int section_no, int count, char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
@@ -59,7 +59,10 @@ size_t device_read(int handle, size_t section_no, size_t count, char* buf)
         count = device->section_count - section_no;
     }
 
-    fseek(device->fp, offset, SEEK_SET);
+    if(fseek(device->fp, offset, SEEK_SET) != 0) {
+        return -1;
+    }
+
     fread(buf, 512, count, device->fp);
 
     if (ferror(device->fp)) {
@@ -70,7 +73,7 @@ size_t device_read(int handle, size_t section_no, size_t count, char* buf)
 }
 
 
-size_t decice_write(int handle, size_t section_no, size_t count, char* buf)
+int device_write(int handle, int section_no, int count, const char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
@@ -84,7 +87,9 @@ size_t decice_write(int handle, size_t section_no, size_t count, char* buf)
         count = device->section_count - section_no;
     }
 
-    fseek(device->fp, offset, SEEK_SET);
+    if(fseek(device->fp, offset, SEEK_SET) != 0) {
+        return -1;
+    }
 
     fwrite(buf, 512, count, device->fp);
 
@@ -96,3 +101,12 @@ size_t decice_write(int handle, size_t section_no, size_t count, char* buf)
     }
 }
 
+int device_section_count(int handle)
+{
+    struct _device_s* device = handle_to_struct(handle);
+    if (device == NULL) {
+        return 0;
+    } else {
+        return device->section_count;
+    }
+}

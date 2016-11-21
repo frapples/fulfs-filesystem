@@ -1,11 +1,12 @@
 PROJECT (UNIXLIKEFS)
 
 set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb -std=c99")
-set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall -std=c99")
+set(CMAKE_C_FLAGS_DEBUG "$ENV{CFLAGS} -O0 -Wall -g -ggdb -std=c99")
+set(CMAKE_C_FLAGS_RELEASE "$ENV{CFLAGS} -O3 -Wall -std=c99")
 
 
-SET(SRC_LIST main.c memory/alloc.c)
+
+SET(LIB_LIST memory/alloc.c utils/sys.c device_io.c)
 
 
 
@@ -14,6 +15,10 @@ MESSAGE(STATUS "This is SOURCE dir" ${PROJECT_SOURCE_DIR})
 
 
 # 相关的源文件是SRC_LIST中定义的源文件列表
-ADD_EXECUTABLE(main ${SRC_LIST})
+ADD_EXECUTABLE(main main.c ${LIB_LIST})
 
 
+# 测试
+ENABLE_TESTING()
+ADD_EXECUTABLE(my_test test.c ${LIB_LIST})
+ADD_TEST(my_test my_test)

@@ -5,6 +5,9 @@ shell 层
 系统调用
 文件操作　| 文件系统操作　| 目录操作
 --------------------
+--------------------
+底层文件操作
+------------------------------
 文件系统实现-和数据有关的数据结构
 文件系统元信息　| 目录树（目录元信息，目录内容）　| 文件元信息，文件内容
 文件系统初始化
@@ -12,12 +15,110 @@ shell 层
 文件系统实现 - 块管理
 空闲块管理
 --------------------
+--------------------
 模拟的 底层 IO 操作
 io_read() 从模拟磁盘的扇区中读取内容
 io_write()　向模拟磁盘的扇区中写入内容
 --------------------
 模拟的 底层 IO 操作实际实现
 标准库的文件操作函数
+
+* 类 unix 文件系统的设计
+** 磁盘布局
+Superblock |  Inode table | Data blocks
+
+superblock：超级块存放文件系统的全局控制信息。
+Inode table: 一个大的 Inode 数组。每个块中存放一定的 Inode。
+Data blocks: 存放文件内容的空间。
+
+磁盘是以块 block 为单位管理的，一个 block 常用 1K，4K，64K。大小应该是扇区大小的整数倍。
+block 从 0 开始编号，最大到 2^32 - 1，（uint32 的最大值）
+
+假设 block 为 1K，可管理的最大磁盘容量达到 4T。
+
+第一扇区存放 Spuerblock 的起始部分。包括最重要的信息：block 大小。也包括完整的 Spuerblock 所占用的 block 大小。
+之后的几个扇区可能存放剩余的 Spuerblock 内容。
+也许 superblock 的完整内容用一个扇区就能放入。但是即使这样，superblock 也会占用整数倍的 block 块。
+
+** Superblock
+起始部分的 Superblock 包括：
+#+BEGIN_SRC c
+struct superblock_t {
+    uint16_t block_size; /* block 大小 */
+    uint16_t superblock_used_block_count; /* spuerblock 总共占用的 block 块个数 */
+}
+#+END_SRC
+剩余部分的 Superblock 包括：
+#+BEGIN_SRC c
+struct superblock_t {
+    uint64_t total_size; /* 文件系统总大小 */
+    uint64_t used_size; /* 被使用的大小 */
+    uint16_t root_dir; /* 指向根目录的 inode */
+    uint32_t inode_table_block; /* inode table 起始的 block 号 */
+    uint32_t data_block_free_stack; /* data block 的空闲管理相关 */
+}
+
+#+END_SRC
+关于 inode_table 的大小，data blocks 的起始 blocks 号能够根据已经有的信息计算出来。
+
+** inode
+*** inode 储存的信息
+Inode 的 mode 为 0 代表此 Inode 为空闲的。
+此外，mode 可标示文件的类型：普通文件，目录，符号链接。
+mode 为 0 表示此 inode 为空闲的。
+#+BEGIN_SRC c
+struct inode_t
+{
+  uint16_t mode; 
+  uint16_t link_count;
+  uint64_t size;
+  uint32_t blocks[10];
+  uint32_t single_indirect_block;
+  uint32_t double_indirect_block;
+  uint32_t triple_indirect_block;
+  time_t accessed_time;
+  time_t modified_time;
+  time_t created_time; 
+};
+#+END_SRC
+
+*** inode 数组
+Inode table 区用连续的一定的 block 储存 inode 数组。
+inode 不跨 block 储存，也就是一个 block 最多可储存整数个 inode。具体数量是：BLOCK_SIZE / sizeof(inode)
+整个 Inode table 里面按顺序储存了一定的 inode。从 0 开始将其编号，到 2^16 -1（uint16 的最大值）
+共有 2^16 个 inode。
+因此用于储存 Inode table 的连续 block 块的个数为：2^16 / (BLOCK_SIZE / sizeof(inode)) (能整除加 0，不能整除加 1)
+
+当 mode 为 0 时表示 inode 为空闲的。利用此来进行空闲 inode 的管理。
+
+** Data blocks
+这里的 blocks 用于给文件的具体数据分配储存空间。
+
+使用成组链接方式将空闲的 blocks 组成一个大栈套小栈的数据结构。。。
+
+** 文件
+这个文件概念和平常的文件概念不一样。
+
+文件的 inode 中记录的文件的属性信息。
+当文件大小不超过 10 * BLOCK_SIZE，使用 inode 节点的 blocks 数组直接指向储存数据的 data block。
+放不下时，启用 single_indirect_block 的一级索引。
+还放不下时，启用二级索引，之后三级索引。。。
+
+*** 目录
+实际上，目录也是文件，只是在文件内容中放了目录表项。
+目录表项占 16 字节，其中 14 字节为文件名，2 字节为其 inode 节点号。
+
+*** 普通文件
+这个就是一般概念的文件。
+
+*** 符号链接
+这个文件链接到另外一个文件上。被链接的文件路径放在文件内容中。
+
+
+
+
+
+
 
 * 代码规范方面
 ** 所有命名一律使用下划线。

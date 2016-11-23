@@ -1,24 +1,47 @@
 
-#include"../device_io.h"
 #include "filesystem.h"
+#include "block.h"
 #include "inode.h"
 #include "superblock.h"
+#include "data_block.h"
 
 #include "../utils/math.h"
 
 
-
 fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
 {
-    /* int bytes_per_sector = 512; */
-    /* block_no_t block_count = device_section_count(device) / sectors_per_block; */
-    /* if (block_count  <= 0) { */
-    /*     return FULFS_FAIL; */
-    /* } */
+    int bytes_per_sector = 512;
+    block_no_t block_count = device_section_count(device) / sectors_per_block;
+    block_no_t inode_table = 1;
 
-    /* /\* inode 所占的block数 *\/ */
-    /* int inode_block_count = count_groups(INODE_MAX_COUNT, sectors_per_block * bytes_per_sector / inode_bin_size()); */
+    /* inode 所占的block数 */
+    int inode_blocksize = count_groups(INODE_MAX_COUNT, sectors_per_block * bytes_per_sector / inode_bin_size());
 
+    block_no_t data_block = inode_table + inode_blocksize;
+
+
+    if (block_count  <= 0 ||
+        data_block >= block_count) {
+        return FULFS_FAIL;
+    }
+
+
+    /* 初始化磁盘的inode区 */
+    inode_t inode;
+    inode_init(&inode);
+    /* TODO 将inode转为二进制写入磁盘 */
+
+    /* 初始化磁盘的data block区 */
+    block_no_t data_block_free_stack = data_blocks_init(device, data_block, block_count - data_block, sectors_per_block);
+
+    superblock_t sb;
+    superblock_create(&sb, device_section_count(device), sectors_per_block,
+                      inode_table, data_block, data_block_free_stack);
+
+    /* 写入superblock */
+    char buf[512];
+    superblock_dump(&sb, buf, sizeof(buf));
+    device_write(device, 0, 1, buf);
 
     return FULFS_SUCCESS;
 }

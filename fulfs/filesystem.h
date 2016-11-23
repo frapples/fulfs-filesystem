@@ -2,6 +2,7 @@
 #define __FULFS__FILESYSETM__H__
 
 #include <stdint.h>
+#include "block.h"
 #include "../device_io.h"
 /*
   这里是关于unix like filesystem的高层操作。
@@ -9,7 +10,6 @@
 */
 
 
-typedef uint32_t block_no_t;
 
 typedef enum {
     FULFS_SUCCESS,

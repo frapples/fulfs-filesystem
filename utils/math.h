@@ -4,7 +4,7 @@
 
 
 /* 每组有per_group个，n个可以分成几组？ */
-inline unsigned long count_groups(unsigned long n, unsigned long per_group)
+static inline unsigned long count_groups(unsigned long n, unsigned long per_group)
 {
     return n / per_group + ((n % per_group == 1)? 0 : 1);
 }

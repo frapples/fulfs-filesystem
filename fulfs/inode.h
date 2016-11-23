@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "filesystem.h"
+#include "block.h"
 
 #define INODE_MAX_COUNT (2 << (16 - 1))
 typedef uint16_t inode_no_t;
@@ -26,5 +26,8 @@ typedef struct
 }inode_t;
 
 size_t inode_bin_size(void);
+
+
+void inode_init(inode_t* inode);
 
 #endif /* __FULFS_INODE__H__ */

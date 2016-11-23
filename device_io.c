@@ -29,28 +29,28 @@ int device_add(const char* path)
 }
 
 
-void device_del(int handle)
+void device_del(device_handle_t handle)
 {
-    if (handle < MAX_DEVICE_COUNT && device_handle[handle] != NULL) {
+    if (handle < MAX_DEVICE_COUNT && handle >= 0 && device_handle[handle] != NULL) {
         ft_free(device_handle[handle]);
         device_handle[handle] = NULL;
     }
 }
 
-static struct _device_s* handle_to_struct(int handle)
+static struct _device_s* handle_to_struct(device_handle_t handle)
 {
-    if (!(handle < MAX_DEVICE_COUNT && device_handle[handle] != NULL)) {
+    if (!(handle < MAX_DEVICE_COUNT && handle >= 0 && device_handle[handle] != NULL)) {
         return NULL;
     } else {
         return device_handle[handle];
     }
 }
 
-int device_read(int handle, int section_no, int count, char* buf)
+int device_read(device_handle_t handle, int section_no, int count, char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
-        return -1;
+        return DEVICE_IO_ERROR;
     }
 
     size_t offset = section_no * 512;
@@ -60,24 +60,24 @@ int device_read(int handle, int section_no, int count, char* buf)
     }
 
     if(fseek(device->fp, offset, SEEK_SET) != 0) {
-        return -1;
+        return DEVICE_IO_ERROR;
     }
 
     fread(buf, 512, count, device->fp);
 
     if (ferror(device->fp)) {
-        return -1;
+        return DEVICE_IO_ERROR;
     } else {
         return count;
     }
 }
 
 
-int device_write(int handle, int section_no, int count, const char* buf)
+int device_write(device_handle_t handle, int section_no, int count, const char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
-        return -1;
+        return DEVICE_IO_ERROR;
     }
 
 
@@ -88,20 +88,20 @@ int device_write(int handle, int section_no, int count, const char* buf)
     }
 
     if(fseek(device->fp, offset, SEEK_SET) != 0) {
-        return -1;
+        return DEVICE_IO_ERROR;
     }
 
     fwrite(buf, 512, count, device->fp);
 
 
     if (ferror(device->fp)) {
-        return -1;
+        return DEVICE_IO_ERROR;
     } else {
         return count;
     }
 }
 
-int device_section_count(int handle)
+int device_section_count(device_handle_t handle)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {

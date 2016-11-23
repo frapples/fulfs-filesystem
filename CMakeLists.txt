@@ -6,7 +6,7 @@ set(CMAKE_C_FLAGS_RELEASE "$ENV{CFLAGS} -O3 -Wall -std=c99")
 
 
 
-SET(LIB_LIST memory/alloc.c utils/sys.c device_io.c)
+SET(LIB_LIST memory/alloc.c utils/sys.c device_io.c fulfs/filesystem.c fulfs/superblock.c fulfs/inode.c)
 
 
 

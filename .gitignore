@@ -52,3 +52,10 @@ dkms.conf
 
 # build目录
 build/
+
+# tag文件
+GPATH
+GTAGS
+GRTAGS
+GSYMS
+

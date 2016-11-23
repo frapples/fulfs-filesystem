@@ -71,6 +71,8 @@ struct superblock_t {
 Inode 的 mode 为 0 代表此 Inode 为空闲的。
 此外，mode 可标示文件的类型：普通文件，目录，符号链接。
 mode 为 0 表示此 inode 为空闲的。
+
+编号为 0 的 inode 节点永远给根目录使用。
 #+BEGIN_SRC c
 struct inode_t
 {

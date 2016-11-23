@@ -44,7 +44,8 @@ block 从 0 开始编号，最大到 2^32 - 1，（uint32 的最大值）
 起始部分的 Superblock 包括：
 #+BEGIN_SRC c
 struct superblock_t {
-    uint16_t block_size; /* block 大小 */
+    uint16_t sectors_per_block; /* block 大小 */
+    uint16_t size_per_sector; /* 扇区大小 */
     uint16_t superblock_used_block_count; /* spuerblock 总共占用的 block 块个数 */
 }
 #+END_SRC
@@ -57,6 +58,10 @@ struct superblock_t {
     uint32_t inode_table_block; /* inode table 起始的 block 号 */
     uint32_t data_block_free_stack; /* data block 的空闲管理相关 */
 }
+
+目前的设计：
+搞简单点，spuerblock 的东西不多，假设它小于一个扇区的大小吧。
+即使这样，方便起见，superblock 仍然占有第 0 个 block。
 
 #+END_SRC
 关于 inode_table 的大小，data blocks 的起始 blocks 号能够根据已经有的信息计算出来。
@@ -125,7 +130,7 @@ inode 不跨 block 储存，也就是一个 block 最多可储存整数个 inode
 ** 类型名称后一律加_t。
 ** 真正的全局变量（非设计意义上局限于某几个模块使用的），前加 g_。
 ** 看上一条。如果发现需要定义真正的全局变量，是否可以把它转换成函数调用的形式？
-** 函数参数的顺序：IN 参数，EDIT 参数，OUT 参数。
+** 函数参数的顺序：IN 参数，EDIT 参数，OUT 参数。（附属参数例外）
 
 ** 工具之类的模块函数前加命名空间 ft_
 ** 系统调用层的模块函数前加命名空间 fufs_

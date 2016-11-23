@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "../device_io.h"
 #include "filesystem.h"
 #include "inode.h"
 
@@ -19,7 +20,7 @@ typedef uint64_t fssize_t;
 typedef struct {
     uint16_t sectors_per_block; /* 每个block占的扇区数 */
     uint16_t size_per_sector; /* 扇区大小 */
-    uint64_t sectors; /* 总的扇区数 */
+    sector_no_t sectors; /* 总的扇区数 */
     uint64_t total_size; /* 文件系统总大小 */
     uint64_t used_size; /* 被使用的大小 */
     inode_no_t root_dir; /* 指向根目录的 inode */
@@ -37,7 +38,7 @@ void superblock_dump(superblock_t* sb, char* bin, size_t bin_size);
 void superblock_load(const char* bin, superblock_t* sb);
 
 /* 给一个新的文件系统初始化superblock */
-void superblock_create(superblock_t* sb, uint64_t sectors, int sectors_per_block,
+void superblock_create(superblock_t* sb,  sector_no_t sectors, int sectors_per_block,
                        block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack);
 
 

@@ -6,7 +6,7 @@
 
 struct _device_s{
     FILE* fp;
-    int section_count;
+    sector_no_t section_count;
 };
 
 #define MAX_DEVICE_COUNT 1024
@@ -46,7 +46,7 @@ static struct _device_s* handle_to_struct(device_handle_t handle)
     }
 }
 
-int device_read(device_handle_t handle, int section_no, int count, char* buf)
+int device_read(device_handle_t handle, sector_no_t section_no, int count, char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
@@ -73,7 +73,7 @@ int device_read(device_handle_t handle, int section_no, int count, char* buf)
 }
 
 
-int device_write(device_handle_t handle, int section_no, int count, const char* buf)
+int device_write(device_handle_t handle, sector_no_t section_no, int count, const char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {

@@ -25,7 +25,7 @@ void superblock_load(const char* bin, superblock_t* sb)
     *(superblock_t *)bin = *sb;
 }
 
-void superblock_create(superblock_t* sb, uint64_t sectors, int sectors_per_block,
+void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_block,
                        block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack)
 {
     sb->sectors = sectors;

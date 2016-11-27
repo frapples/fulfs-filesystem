@@ -12,7 +12,7 @@ size_t superblock_bin_size(void)
 }
 
 /* NOTE:目前的实现并未考虑太多的通用性，包括内存布局和字节序 */
-void superblock_dump(superblock_t* sb, char* bin, size_t bin_size)
+void superblock_dump_to_bin(superblock_t* sb, char* bin, size_t bin_size)
 {
     assert(bin_size >= superblock_bin_size());
 
@@ -20,7 +20,7 @@ void superblock_dump(superblock_t* sb, char* bin, size_t bin_size)
     memset(bin + superblock_bin_size(), 0, bin_size - superblock_bin_size());
 }
 
-void superblock_load(const char* bin, superblock_t* sb)
+void superblock_load_from_bin(const char* bin, superblock_t* sb)
 {
     *(superblock_t *)bin = *sb;
 }
@@ -43,6 +43,20 @@ void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_bl
 }
 
 
+bool superblock_load(device_handle_t device, superblock_t* sb)
+{
+    /* TODO */
+    assert(false);
+
+    return true;
+}
+
+bool superblock_dump(device_handle_t device, superblock_t* sb)
+{
+    char buf[512];
+    superblock_dump_to_bin(sb, buf, sizeof(buf));
+    return DEVICE_IO_SUCCESS(device_write(device, 0, 1, buf));
+}
 
 
 block_no_t superblock_block_count(const superblock_t* sb)

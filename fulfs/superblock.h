@@ -33,14 +33,19 @@ typedef struct {
 size_t superblock_bin_size(void);
 
 /* 将superblock转成二进制字节。bin的剩余部分会被填0，返回bin */
-void superblock_dump(superblock_t* sb, char* bin, size_t bin_size);
+void superblock_dump_to_bin(superblock_t* sb, char* bin, size_t bin_size);
 /* 将二进制字节转换成superblock。bin太小了概不负责。返回sb */
-void superblock_load(const char* bin, superblock_t* sb);
+void superblock_load_from_bin(const char* bin, superblock_t* sb);
 
 /* 给一个新的文件系统初始化superblock */
 void superblock_create(superblock_t* sb,  sector_no_t sectors, int sectors_per_block,
                        block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack);
 
+
+/* 从磁盘加载superblock */
+bool superblock_load(device_handle_t device, superblock_t* sb);
+/* 将superblock写入磁盘 */
+bool superblock_dump(device_handle_t device, superblock_t* sb);
 
 /* 文件系统block总数 */
 block_no_t superblock_block_count(const superblock_t* sb);

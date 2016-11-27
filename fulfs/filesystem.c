@@ -1,4 +1,3 @@
-
 #include "filesystem.h"
 #include "block.h"
 #include "inode.h"
@@ -29,7 +28,12 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
     /* 初始化磁盘的inode区 */
     inode_t inode;
     inode_init(&inode);
-    /* TODO 将inode转为二进制写入磁盘 */
+
+    for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
+        if (inode_dump(device, inode_table, i, &inode)) {
+            return FULFS_FAIL;
+        }
+    }
 
     /* 初始化磁盘的data block区 */
     block_no_t data_block_free_stack = data_blocks_init(device, data_block, block_count - data_block, sectors_per_block);
@@ -39,9 +43,9 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
                       inode_table, data_block, data_block_free_stack);
 
     /* 写入superblock */
-    char buf[512];
-    superblock_dump(&sb, buf, sizeof(buf));
-    device_write(device, 0, 1, buf);
+    if (superblock_dump(device, &sb)) {
+        return FULFS_FAIL;
+    }
 
     return FULFS_SUCCESS;
 }

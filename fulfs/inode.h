@@ -34,8 +34,10 @@ void inode_init(inode_t* inode);
 
 
 /* 读取no号inode */
-bool inode_load(device_handle_t device, block_no_t inode_table_start, inode_no_t no, inode_t* inode);
+bool inode_load(device_handle_t device,int sectors_per_block, block_no_t inode_table_start, inode_no_t no, inode_t* inode);
 /* 写入no号inode */
-bool inode_dump(device_handle_t device, block_no_t inode_table_start, inode_no_t no, inode_t* inode);
+bool inode_dump(device_handle_t device,int sectors_per_block, block_no_t inode_table_start, inode_no_t no, inode_t* inode);
+
+int inode_block_count(int sectors_per_block, int inode_count);
 
 #endif /* __FULFS_INODE__H__ */

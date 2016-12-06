@@ -13,7 +13,7 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
     block_no_t inode_table = 1;
 
     /* inode 所占的block数 */
-    int inode_blocksize = count_groups(INODE_MAX_COUNT, sectors_per_block * BYTES_PER_SECTOR / inode_bin_size());
+    int inode_blocksize =  inode_block_count(sectors_per_block, INODE_MAX_COUNT);
 
     block_no_t data_block = inode_table + inode_blocksize;
 
@@ -29,7 +29,7 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
     inode_init(&inode);
 
     for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
-        if (inode_dump(device, inode_table, i, &inode)) {
+        if (inode_dump(device, sectors_per_block, inode_table, i, &inode)) {
             return FULFS_FAIL;
         }
     }

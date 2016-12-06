@@ -29,10 +29,9 @@ void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_bl
                        block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack)
 {
     sb->sectors = sectors;
-    sb->size_per_sector = 512;
     sb->sectors_per_block = sectors_per_block;
 
-    sb->total_size = ((sb->sectors / sb->sectors_per_block) - data_block) * (sb->size_per_sector * sb->sectors_per_block);
+    sb->total_size = ((sb->sectors / sb->sectors_per_block) - data_block) * (BYTES_PER_SECTOR * sb->sectors_per_block);
     sb->used_size = 0;
 
     sb->root_dir = 0;

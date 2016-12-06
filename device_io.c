@@ -19,7 +19,7 @@ int device_add(const char* path)
             device_handle[i] = FT_NEW(struct _device_s, 1);
 
             device_handle[i]->fp = fopen(path, "r+b");
-            device_handle[i]->section_count = ft_filesize(device_handle[i]->fp) / 512;
+            device_handle[i]->section_count = ft_filesize(device_handle[i]->fp) /  BYTES_PER_SECTOR;
 
             return i;
         }
@@ -46,24 +46,24 @@ static struct _device_s* handle_to_struct(device_handle_t handle)
     }
 }
 
-int device_read(device_handle_t handle, sector_no_t section_no, int count, char* buf)
+int device_read(device_handle_t handle, sector_no_t sector_no, int count, char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
         return DEVICE_IO_ERROR;
     }
 
-    size_t offset = section_no * 512;
+    size_t offset = sector_no * BYTES_PER_SECTOR;
 
-    if (!(section_no + count <= device->section_count)) {
-        count = device->section_count - section_no;
+    if (!(sector_no + count <= device->section_count)) {
+        count = device->section_count - sector_no;
     }
 
     if(fseek(device->fp, offset, SEEK_SET) != 0) {
         return DEVICE_IO_ERROR;
     }
 
-    fread(buf, 512, count, device->fp);
+    fread(buf, BYTES_PER_SECTOR, count, device->fp);
 
     if (ferror(device->fp)) {
         return DEVICE_IO_ERROR;
@@ -73,7 +73,7 @@ int device_read(device_handle_t handle, sector_no_t section_no, int count, char*
 }
 
 
-int device_write(device_handle_t handle, sector_no_t section_no, int count, const char* buf)
+int device_write(device_handle_t handle, sector_no_t sector_no, int count, const char* buf)
 {
     struct _device_s* device = handle_to_struct(handle);
     if (device == NULL) {
@@ -81,17 +81,17 @@ int device_write(device_handle_t handle, sector_no_t section_no, int count, cons
     }
 
 
-    size_t offset = section_no * 512;
+    size_t offset = sector_no * BYTES_PER_SECTOR;
 
-    if (!(section_no + count <= device->section_count)) {
-        count = device->section_count - section_no;
+    if (!(sector_no + count <= device->section_count)) {
+        count = device->section_count - sector_no;
     }
 
     if(fseek(device->fp, offset, SEEK_SET) != 0) {
         return DEVICE_IO_ERROR;
     }
 
-    fwrite(buf, 512, count, device->fp);
+    fwrite(buf, BYTES_PER_SECTOR, count, device->fp);
 
 
     if (ferror(device->fp)) {

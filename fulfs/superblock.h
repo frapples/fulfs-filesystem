@@ -19,7 +19,6 @@ typedef uint64_t fssize_t;
 
 typedef struct {
     uint16_t sectors_per_block; /* 每个block占的扇区数 */
-    uint16_t size_per_sector; /* 扇区大小 */
     sector_no_t sectors; /* 总的扇区数 */
     uint64_t total_size; /* 文件系统总大小 */
     uint64_t used_size; /* 被使用的大小 */

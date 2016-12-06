@@ -9,12 +9,11 @@
 
 fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
 {
-    int bytes_per_sector = 512;
     block_no_t block_count = device_section_count(device) / sectors_per_block;
     block_no_t inode_table = 1;
 
     /* inode 所占的block数 */
-    int inode_blocksize = count_groups(INODE_MAX_COUNT, sectors_per_block * bytes_per_sector / inode_bin_size());
+    int inode_blocksize = count_groups(INODE_MAX_COUNT, sectors_per_block * BYTES_PER_SECTOR / inode_bin_size());
 
     block_no_t data_block = inode_table + inode_blocksize;
 

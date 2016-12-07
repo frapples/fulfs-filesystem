@@ -49,4 +49,8 @@ bool inode_dump(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t no, inode_t* inode)
 
 int inode_block_count(size_t block_size, int inode_count);
 
+
+bool inode_alloc(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t* p_inode_no); /* 分配一个空闲的inode */
+void inode_free(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t no); /* 释放inode */
+
 #endif /* __FULFS_INODE__H__ */

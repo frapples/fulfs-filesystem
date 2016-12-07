@@ -85,3 +85,29 @@ int inode_block_count(size_t block_size, int inode_count)
 {
     return count_groups(inode_count, block_size / inode_bin_size());
 }
+
+bool inode_alloc(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t* p_inode_no)
+{
+    inode_t inode;
+    for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
+        bool success = inode_load(dev_inode_ctrl, i, &inode);
+        if (!success) {
+            return false;
+        }
+        if (inode.mode == 0) {
+            *p_inode_no = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+void inode_free(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t no)
+{
+    inode_t inode;
+    bool success = inode_load(dev_inode_ctrl, no, &inode);
+    if (success) {
+        inode.mode = 0;
+    }
+    inode_dump(dev_inode_ctrl, no, &inode);
+}

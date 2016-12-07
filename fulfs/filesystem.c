@@ -13,7 +13,7 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
     block_no_t inode_table = 1;
 
     /* inode 所占的block数 */
-    int inode_blocksize =  inode_block_count(sectors_per_block, INODE_MAX_COUNT);
+    int inode_blocksize =  inode_block_count(sectors_per_block * BYTES_PER_SECTOR, INODE_MAX_COUNT);
 
     block_no_t data_block = inode_table + inode_blocksize;
 
@@ -25,11 +25,14 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
 
 
     /* 初始化磁盘的inode区 */
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init(&dev_inode_ctrl, device, sectors_per_block * BYTES_PER_SECTOR, inode_table, inode_blocksize);
+
     inode_t inode;
     inode_init(&inode);
 
     for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
-        if (inode_dump(device, sectors_per_block, inode_table, i, &inode)) {
+        if (inode_dump(&dev_inode_ctrl, i, &inode)) {
             return FULFS_FAIL;
         }
     }

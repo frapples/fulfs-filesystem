@@ -4,14 +4,20 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "def.h"
 #include "block.h"
+#include "superblock.h"
 
 
 /* 如果INODE_MAX_COUNT是inode_no_t的最大值的话，uint16_t的 i < INODE_MAX_COUNT永真，所以为了方便减一 */
 #define INODE_MAX_COUNT (UINT16_MAX - 1)
-typedef uint16_t inode_no_t;
 
-typedef uint64_t time_t;
+typedef struct {
+    device_handle_t device;
+    size_t block_size;
+    block_no_t start;
+    block_no_t size;
+}dev_inode_ctrl_t;
 
 typedef struct
 {
@@ -32,12 +38,15 @@ size_t inode_bin_size(void);
 
 void inode_init(inode_t* inode);
 
+void dev_inode_ctrl_init(dev_inode_ctrl_t* dev_inode_ctrl, device_handle_t device, size_t block_size, block_no_t start, block_no_t size);
+void dev_inode_ctrl_init_from_superblock(dev_inode_ctrl_t* dev_inode_ctrl, device_handle_t device, const superblock_t* sb);
+
 
 /* 读取no号inode */
-bool inode_load(device_handle_t device,int sectors_per_block, block_no_t inode_table_start, inode_no_t no, inode_t* inode);
+bool inode_load(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t no, inode_t* inode);
 /* 写入no号inode */
-bool inode_dump(device_handle_t device,int sectors_per_block, block_no_t inode_table_start, inode_no_t no, inode_t* inode);
+bool inode_dump(dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t no, inode_t* inode);
 
-int inode_block_count(int sectors_per_block, int inode_count);
+int inode_block_count(size_t block_size, int inode_count);
 
 #endif /* __FULFS_INODE__H__ */

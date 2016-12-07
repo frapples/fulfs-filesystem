@@ -6,7 +6,7 @@
 
 #include "../device_io.h"
 #include "block.h"
-#include "inode.h"
+#include "def.h"
 
 
 
@@ -48,6 +48,7 @@ bool superblock_dump(device_handle_t device, superblock_t* sb);
 
 /* 文件系统block总数 */
 block_no_t superblock_block_count(const superblock_t* sb);
+size_t superblock_block_size(const superblock_t* sb); /* 每个block的大小 */
 
 uint64_t superblock_total_size(const superblock_t* sb); /* 文件系统总大小 */
 uint64_t superblock_used_size(const superblock_t* sb); /* 文件系统已用大小 */

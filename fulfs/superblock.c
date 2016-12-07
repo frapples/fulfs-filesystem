@@ -126,3 +126,8 @@ void superblock_data_block_free_stack_set(superblock_t* sb, block_no_t new_stack
 {
     sb->data_block_free_stack = new_stack;
 }
+
+size_t superblock_block_size(const superblock_t* sb)
+{
+    return sb->sectors_per_block * BYTES_PER_SECTOR;
+}

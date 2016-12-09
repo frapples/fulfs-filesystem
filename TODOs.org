@@ -21,6 +21,51 @@ io_write()　向模拟磁盘的扇区中写入内容
 模拟的 底层 IO 操作实际实现
 标准库的文件操作函数
 
+图形表示：
+
+#+BEGIN_SRC dot :file TODOs/design.png :cmdline -Tpng :exports none :results silent
+  digraph structs {
+      node [shape=record];
+      //node[fontsize=10];
+      //edge[fontsize=9];
+
+      struct0 [shape=record, label="shell 层"];
+      struct1 [shape=record, label="系统调用层：| <f0>磁盘挂载 |<f4>文件系统操作 |<f1> 文件操作 |<f2> 目录操作|<f3> 软链接操作"];
+      struct2 [shape=record, label="具体文件系统层(可多个)：|<f4>文件系统操作|<f1> 文件操作 |<f2> 目录操作|<f3> 软链接操作"];
+      struct3 [shape=record, label="底层文件层：| 底层文件读写"];
+
+      struct4 [shape=record, label="底层数据结构： | <f1> superblock | <f2> inode | <f3> data block"];
+
+      struct5 [shape=record, label="block I/O 操作"];
+
+      struct6 [shape=record, label="抽象磁盘：| 磁盘挂载 | <f2>扇区 I/O 操作"];
+
+      struct7 [shape=record, label="具体磁盘(可多个) | 将原系统的大文件虚拟成磁盘"];
+      
+      struct0->struct1;
+      struct1 -> struct2;
+
+      struct2:f1 -> struct3;
+      struct2:f2 -> struct3;
+      struct2:f3 -> struct3;
+      
+      struct2:f4 -> struct4:f1;
+
+      struct3 -> struct4:f1;
+      struct3 -> struct4:f2;
+      struct3 -> struct4:f3;
+
+      struct4:f1 -> struct5;
+      struct4:f2 -> struct5;
+      struct4:f3 -> struct5;
+
+      struct5 -> struct6:f2;
+
+      struct6 -> struct7;
+  }
+#+END_SRC
+[[file:TODOs/design.png]]
+
 * 类 unix 文件系统的设计
 ** 磁盘布局
 Superblock |  Inode table | Data blocks

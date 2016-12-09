@@ -1,0 +1,12 @@
+digraph structs {
+    node [shape=record];
+
+    struct0 [shape=record, label="shell 层"];
+    struct1 [shape=record, label="系统调用层：|<f1> 文件操作 |<f2> 目录操作|<f3> 软链接操作"];
+    // struct1 [shape=record, label="<f0> |<f1> mid\ dle|<f2> right"];
+    struct2 [shape=record, label="<f0> one|<f1> two"];
+    struct3 [shape=record, label="hello\nworld |{ b |{c|<here> d|e}| f}| g | h"];
+    struct0->struct1;
+    struct1 -> struct2;
+    struct1 -> struct3;
+}

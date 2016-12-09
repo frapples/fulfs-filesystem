@@ -21,6 +21,17 @@ static inline bool block_write(device_handle_t device, int sectors_per_block, bl
     return DEVICE_IO_SUCCESS(device_write(device, no * sectors_per_block, sectors_per_block, buf));
 }
 
+static inline bool block_copy(device_handle_t device, int sectors_per_block, block_no_t from, block_no_t to)
+{
+    char buf[MAX_BYTES_PER_BLOCK];
+    bool success = block_read(device, sectors_per_block, from, buf);
+    if (!success) {
+        return false;
+    }
+
+    return block_write(device, sectors_per_block, to, buf);
+}
+
 
 
 #endif /* __FULFS_BLOCK__ */

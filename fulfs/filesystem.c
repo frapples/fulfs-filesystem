@@ -38,7 +38,7 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
     }
 
     /* 初始化磁盘的data block区 */
-    block_no_t data_block_free_stack = data_blocks_init(device, data_block, block_count - data_block, sectors_per_block);
+    block_no_t data_block_free_stack = data_blocks_init(device, sectors_per_block, data_block, block_count - data_block);
 
     superblock_t sb;
     superblock_create(&sb, device_section_count(device), sectors_per_block,

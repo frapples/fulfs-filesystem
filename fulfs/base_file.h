@@ -10,8 +10,12 @@ typedef struct {
     inode_no_t inode_no;
     inode_t inode;
 
-    block_no_t current_block;
-    int current_offset;
+    /* 储存内部指针的底层信息 */
+    struct {
+        block_no_t current_block_relative;
+        block_no_t current_block;
+        int current_offset;
+    }current;
 }base_file_t;
 
 bool base_file_open(base_file_t* base_file, dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t inode_no); /* 打开底层文件 */

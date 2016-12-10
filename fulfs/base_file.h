@@ -30,8 +30,11 @@ time_t base_file_created_time(const base_file_t* base_file);
 
 /* IO */
 bool base_file_seek(base_file_t* base_file, fsize_t offset);
-bool base_file_read(base_file_t* base_file, int count, char* buf);
-bool base_file_write(base_file_t* base_file, int count, const char* buf);
+fsize_t base_file_tell(const base_file_t* base_file);
+
+#define BASE_FILE_IO_ERROR -1
+int base_file_read(base_file_t* base_file, int count, char* buf);
+int base_file_write(base_file_t* base_file, int count, const char* buf);
 
 bool base_file_close(base_file_t* base_file);
 

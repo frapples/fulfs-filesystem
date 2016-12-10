@@ -3,6 +3,8 @@
 #include "inode.h"
 #include "data_block.h"
 #include "block.h"
+#include "../utils/math.h"
+#include <string.h>
 
 #include <assert.h>
 
@@ -65,14 +67,57 @@ bool base_file_seek(base_file_t* base_file, fsize_t offset)
     return success;
 }
 
-bool base_file_read(base_file_t* base_file, int count, char* buf)
+fsize_t base_file_tell(const base_file_t* base_file)
 {
-    /* TODO */
-    return true;
+    return base_file->current.current_block_relative * base_file->dev_inode_ctrl.block_size
+        + base_file->current.current_offset;
 }
 
-bool base_file_write(base_file_t* base_file, int count, const char* buf)
+int base_file_read(base_file_t* base_file, int count, char* buf)
 {
+    /* 保证接下来的count没有超过文件大小 */
+    if (base_file_size(base_file) - base_file_tell(base_file) < (fsize_t)count) {
+        count = base_file_size(base_file) - base_file_tell(base_file);
+    }
+
+    char block_buf[MAX_BYTES_PER_BLOCK];
+    int readed_count = 0;
+    while (readed_count < count) {
+        bool success = block_read(base_file->dev_inode_ctrl.device,
+                   base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                   base_file->current.current_block,
+                   block_buf);
+        if (!success) {
+            return BASE_FILE_IO_ERROR;
+        }
+
+        int should_read_size = min_int(base_file->dev_inode_ctrl.block_size - base_file->current.current_offset,
+                                       count - readed_count);
+
+        memcpy(buf + readed_count, block_buf + base_file->current.current_offset, should_read_size);
+        readed_count += should_read_size;
+
+        /* 更新当前的位置 */
+        base_file->current.current_offset += should_read_size;
+        if (base_file->current.current_offset >= (int)base_file->dev_inode_ctrl.block_size) {
+            base_file->current.current_offset = 0;
+            base_file->current.current_block_relative++;
+            bool success = locate(base_file,
+                                  base_file->current.current_block_relative, &(base_file->current.current_block));
+            if (!success) {
+                return BASE_FILE_IO_ERROR;
+            }
+        }
+    }
+
+    return readed_count;
+}
+
+int base_file_write(base_file_t* base_file, int count, const char* buf)
+{
+    /* 占用为0的文件，要先分配block */
+    if (base_file->inode.size == 0) {
+    }
     /* TODO */
     return true;
 }

@@ -29,6 +29,7 @@ struct block_info_s
 static bool block_relative_to_block_info(const base_file_t* base_file, block_no_t block_relative, struct block_info_s* info);
 static bool add_a_item_for_indirect(base_file_t* base_file, block_no_t no, int size, block_no_t *p_block); /* 给一个间接块添加一项 */
 static bool alloc_block(base_file_t* base_file, block_no_t* p_block); /* 包装下data block那一挂参数的函数 =_= */
+static bool free_block(base_file_t* base_file, block_no_t block);
 
 /************************************************/
 static bool indirect_load(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[]);
@@ -223,19 +224,21 @@ static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t
 
 static bool add_block(base_file_t* base_file, block_no_t* p_newblock)
 {
+    /* NOTE: 目前的实现很啰嗦 =_= 而且如果分配了几个块后出现错误，会导致类似内存泄漏的块泄漏问题 以后再改吧 */
+    /* FIXME:可能造成块泄漏 */
     block_no_t last_block_relative = base_file_size(base_file) / base_file->dev_inode_ctrl.block_size;
     int blocknos_per_block = num_per_indirect(base_file->dev_inode_ctrl.block_size);
     bool success;
 
+    struct block_info_s info;
+    success = block_relative_to_block_info(base_file, last_block_relative, &info);
+    if (!success) {
+        return false;
+    }
+
 
     if (indirect_level(base_file, last_block_relative) == indirect_level(base_file, last_block_relative + 1)) {
         /* 加一个块不会导致启用更高的索引 */
-        struct block_info_s info;
-        success = block_relative_to_block_info(base_file, last_block_relative, &info);
-        if (!success) {
-            return false;
-        }
-
         if (info.level == 0) {
             success = alloc_block(base_file, &(base_file->inode.blocks[last_block_relative + 1]));
             if (!success) {
@@ -288,12 +291,61 @@ static bool add_block(base_file_t* base_file, block_no_t* p_newblock)
             return add_a_item_for_indirect(base_file, block2, 0, p_newblock);
 
         } else {
+
             assert(false);
         }
 
 
     } else {
-        /* TODO */
+
+
+        if (info.level == 0) {
+            /* 启用1级索引 */
+
+            success = alloc_block(base_file,  &(base_file->inode.single_indirect_block));
+            if (!success) {
+                return false;
+            }
+            return add_a_item_for_indirect(base_file, base_file->inode.single_indirect_block, 0, p_newblock);
+
+        } else if (info.level == 1) {
+
+            success = alloc_block(base_file,  &(base_file->inode.double_indirect_block));
+            if (!success) {
+                return false;
+            }
+
+            block_no_t block1;
+            success = add_a_item_for_indirect(base_file, base_file->inode.double_indirect_block, 0, &block1);
+            if (!success) {
+                return false;
+            }
+            return add_a_item_for_indirect(base_file, block1, 0, p_newblock);
+
+        } else if (info.level == 2) {
+
+            success = alloc_block(base_file,  &(base_file->inode.triple_indirect_block));
+            if (!success) {
+                return false;
+            }
+
+            block_no_t block1;
+            success = add_a_item_for_indirect(base_file, base_file->inode.double_indirect_block, 0, &block1);
+            if (!success) {
+                return false;
+            }
+
+            block_no_t block2;
+            success = add_a_item_for_indirect(base_file, block1, 0, &block2);
+            if (!success) {
+                return false;
+            }
+
+            return add_a_item_for_indirect(base_file, block2, 0, p_newblock);
+
+        } else {
+            assert(false);
+        }
     }
     assert(false);
     return false;
@@ -377,8 +429,27 @@ static bool block_relative_to_block_info(const base_file_t* base_file, block_no_
 
 static bool add_a_item_for_indirect(base_file_t* base_file, block_no_t no, int size, block_no_t *p_block)
 {
-    /* TODO */
-    return false;
+    assert(size < num_per_indirect(base_file->dev_inode_ctrl.block_size) - 1);
+
+    block_no_t blocks[MAX_NUM_PER_INDIRECT];
+    bool success = indirect_load(base_file->dev_inode_ctrl.device, base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR, no, blocks);
+    if (!success) {
+        return false;
+    }
+
+    success = alloc_block(base_file, &(blocks[size]));
+    if (!success) {
+        return false;
+    }
+
+    success = indirect_dump(base_file->dev_inode_ctrl.device, base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR, no, blocks);
+    if (!success) {
+        free_block(base_file, blocks[size]);
+        return false;
+    }
+
+    *p_block = blocks[size];
+    return true;
 }
 
 static bool alloc_block(base_file_t* base_file, block_no_t* p_block)
@@ -393,6 +464,15 @@ static bool alloc_block(base_file_t* base_file, block_no_t* p_block)
         *p_block = block;
     }
     return success;
+}
+
+
+static bool free_block(base_file_t* base_file, block_no_t block)
+{
+    return data_block_free(base_file->dev_inode_ctrl.device,
+                                    base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                                    superblock_data_block_free_stack(&(base_file->sb)),
+                                    block);
 }
 
 /************************************************/

@@ -9,8 +9,21 @@
 #include <assert.h>
 
 /* 索引等级。1级索引？2级索引？三级索引？ */
-static int indirect_level(base_file_t* base_file,  block_no_t block_relative);
+static int indirect_level(const base_file_t* base_file,  block_no_t block_relative);
 static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t *p_block);
+static bool add_block(base_file_t* base_file);
+
+/* 用来标识文件的某个block */
+struct block_info_s
+{
+    int level;
+    int index_in_block0;
+    block_no_t block_no_1;
+    int index_in_block1;
+    block_no_t block_no_2;
+    int index_in_block2;
+};
+static bool block_relative_to_block_info(const base_file_t* base_file, block_no_t block_relative, struct block_info_s* info);
 
 static bool indirect_load(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[]);
 static bool indirect_dump(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[]);
@@ -118,8 +131,11 @@ int base_file_write(base_file_t* base_file, int count, const char* buf)
     /* 占用为0的文件，要先分配block */
     if (base_file->inode.size == 0) {
     }
-    /* TODO */
-    return true;
+
+    while (true) {
+        
+    }
+    return BASE_FILE_IO_ERROR;
 }
 
 bool base_file_close(base_file_t* base_file)
@@ -128,7 +144,7 @@ bool base_file_close(base_file_t* base_file)
 }
 
 /*********************************/
-static int indirect_level(base_file_t* base_file,  block_no_t block_relative)
+static int indirect_level(const base_file_t* base_file,  block_no_t block_relative)
 {
     block_no_t level_0_max_block_count = (fsize_t)(LEVEL_0_INDIRECT_COUNT);
     if (block_relative <= level_0_max_block_count) {
@@ -158,34 +174,75 @@ static int indirect_level(base_file_t* base_file,  block_no_t block_relative)
 
 static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t *p_block)
 {
+    struct block_info_s info;
+    bool success = block_relative_to_block_info(base_file, block_relative, &info);
+    if (!success) {
+        return false;
+    }
+
+    if (info.level == 0) {
+        *p_block = base_file->inode.blocks[block_relative];
+        return true;
+    }
+
+    /* 最后一跳的间接块 */
+    block_no_t last_block;
+    int offset;
+    if (info.level == 1) {
+        last_block = base_file->inode.single_indirect_block;
+        offset = info.index_in_block0;
+    } else if (info.level == 2) {
+        last_block = info.block_no_1;
+        offset = info.index_in_block1;
+    } else if (info.level == 3) {
+        last_block = info.block_no_2;
+        offset = info.index_in_block2;
+    } else {
+        assert(false);
+    }
+
+
+    block_no_t blocks[MAX_NUM_PER_INDIRECT];
+    success = indirect_load(base_file->dev_inode_ctrl.device,
+                                 base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                                 last_block,
+                                 blocks);
+    if (!success) {
+        return false;
+    }
+    *p_block = blocks[offset];
+    return true;
+}
+
+static bool add_block(base_file_t* base_file)
+{
+    /* TODO */
+    return false;
+}
+
+static bool block_relative_to_block_info(const base_file_t* base_file, block_no_t block_relative, struct block_info_s* info)
+{
+    info->level = indirect_level(base_file, block_relative);
 
     int blocknos_per_block = base_file->dev_inode_ctrl.block_size / sizeof(block_no_t);
     block_no_t level_0_max_block_count = (fsize_t)(LEVEL_0_INDIRECT_COUNT);
     block_no_t level_1_max_block_count = level_0_max_block_count + blocknos_per_block;
     block_no_t level_2_max_block_count = level_1_max_block_count + (blocknos_per_block * blocknos_per_block);
 
-    int level = indirect_level(base_file, block_relative);
-    if (level == 0) {
-        *p_block = base_file->inode.blocks[block_relative];
+    if (info->level == 0) {
         return true;
 
-    } else if (level == 1) {
-        block_no_t blocks[MAX_NUM_PER_INDIRECT];
-        bool success = indirect_load(base_file->dev_inode_ctrl.device,
-                   base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
-                   base_file->inode.single_indirect_block,
-                   blocks);
-        if (!success) {
-            return false;
-        }
-
-        *p_block = blocks[block_relative - level_0_max_block_count];
+    } else if (info->level == 1) {
+        info->index_in_block0 =  block_relative - level_0_max_block_count;
         return true;
 
-    } else if (level == 2) {
+    } else if (info->level == 2) {
         block_no_t relative = block_relative - level_1_max_block_count;
         block_no_t relative1 = relative / blocknos_per_block;
         int offset1 = relative % blocknos_per_block;
+
+        info->index_in_block0 = relative1;
+        info->index_in_block1 = offset1;
 
 
         block_no_t blocks[MAX_NUM_PER_INDIRECT];
@@ -197,25 +254,19 @@ static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t
             return false;
         }
 
-        block_no_t block = blocks[relative1];
-        success = indirect_load(base_file->dev_inode_ctrl.device,
-                      base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
-                      block,
-                      blocks);
-        if (!success) {
-            return false;
-        }
-
-        *p_block = blocks[offset1];
+        info->block_no_1 = blocks[info->index_in_block0];
         return true;
 
-    } else if (level == 3) {
+    } else if (info->level == 3) {
         block_no_t relative = block_relative - level_2_max_block_count;
         block_no_t relative2 = relative / blocknos_per_block;
         int offset2 = relative % blocknos_per_block;
         block_no_t relative1 = relative2 / blocknos_per_block;
         int offset1 = relative2 % blocknos_per_block;
 
+        info->index_in_block0 = relative1;
+        info->index_in_block1 = offset1;
+        info->index_in_block2 = offset2;
 
         block_no_t blocks[MAX_NUM_PER_INDIRECT];
         bool success = indirect_load(base_file->dev_inode_ctrl.device,
@@ -226,34 +277,24 @@ static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t
             return false;
         }
 
-        block_no_t block1 = blocks[relative1];
+        info->block_no_1 = blocks[info->index_in_block0];
         success = indirect_load(base_file->dev_inode_ctrl.device,
                                 base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
-                                block1,
+                                info->block_no_1,
                                 blocks);
         if (!success) {
             return false;
         }
 
-        block_no_t block2 = blocks[offset1];
-        success = indirect_load(base_file->dev_inode_ctrl.device,
-                                base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
-                                block2,
-                                blocks);
-        if (!success) {
-            return false;
-        }
-
-        *p_block = blocks[offset2];
+        info->block_no_2 = blocks[info->index_in_block1];
         return true;
     } else {
         assert(false);
     }
 
     assert(false);
+
 }
-
-
 /************************************************/
 /* NOTE: 简单实现，未考虑字节序 */
 static bool indirect_load(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[])

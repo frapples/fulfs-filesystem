@@ -46,7 +46,6 @@ bool base_file_open(base_file_t* base_file, superblock_t* sb, dev_inode_ctrl_t* 
         return false;
     }
 
-    base_file->current.current_block = base_file->inode.blocks[0];
     base_file->current.current_offset = 0;
     return true;
 }
@@ -83,9 +82,7 @@ bool base_file_seek(base_file_t* base_file, fsize_t offset)
     block_no_t block_relative = offset / base_file->dev_inode_ctrl.block_size;
     base_file->current.current_block_relative = block_relative;
     base_file->current.current_offset = offset % base_file->dev_inode_ctrl.block_size;
-
-    bool success = locate(base_file, block_relative, &(base_file->current.current_block));
-    return success;
+    return true;
 }
 
 fsize_t base_file_tell(const base_file_t* base_file)
@@ -104,10 +101,16 @@ int base_file_read(base_file_t* base_file, int count, char* buf)
     char block_buf[MAX_BYTES_PER_BLOCK];
     int readed_count = 0;
     while (readed_count < count) {
-        bool success = block_read(base_file->dev_inode_ctrl.device,
-                   base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
-                   base_file->current.current_block,
-                   block_buf);
+        block_no_t current_block;
+        bool success = locate(base_file, base_file->current.current_block_relative, &current_block);
+        if (!success) {
+            return BASE_FILE_IO_ERROR;
+        }
+
+        success = block_read(base_file->dev_inode_ctrl.device,
+                             base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                             current_block,
+                             block_buf);
         if (!success) {
             return BASE_FILE_IO_ERROR;
         }
@@ -118,17 +121,7 @@ int base_file_read(base_file_t* base_file, int count, char* buf)
         memcpy(buf + readed_count, block_buf + base_file->current.current_offset, should_read_size);
         readed_count += should_read_size;
 
-        /* 更新当前的位置 */
-        base_file->current.current_offset += should_read_size;
-        if (base_file->current.current_offset >= (int)base_file->dev_inode_ctrl.block_size) {
-            base_file->current.current_offset = 0;
-            base_file->current.current_block_relative++;
-            bool success = locate(base_file,
-                                  base_file->current.current_block_relative, &(base_file->current.current_block));
-            if (!success) {
-                return BASE_FILE_IO_ERROR;
-            }
-        }
+        base_file_seek(base_file, base_file_tell(base_file) + should_read_size);
     }
 
     return readed_count;
@@ -136,12 +129,47 @@ int base_file_read(base_file_t* base_file, int count, char* buf)
 
 int base_file_write(base_file_t* base_file, int count, const char* buf)
 {
-    /* 占用为0的文件，要先分配block */
-    if (base_file->inode.size == 0) {
-    }
+    char block_buf[MAX_BYTES_PER_BLOCK];
+    int writed_count = 0;
+    while (writed_count < count) {
 
-    while (true) {
-        
+        block_no_t current_block;
+        if (base_file_tell(base_file) == base_file_size(base_file)) {
+            /* FIXME: 这里有同样尴尬的问题，就是如果后续失败了这里分配的block怎么办 */
+            bool success = add_block(base_file, &current_block);
+            if (!success) {
+                return false;
+            }
+        } else {
+            bool success = locate(base_file, base_file->current.current_block_relative, &current_block);
+            if (!success) {
+                return BASE_FILE_IO_ERROR;
+            }
+        }
+        bool success = block_read(base_file->dev_inode_ctrl.device,
+                                  base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                                  current_block,
+                                  block_buf);
+        if (!success) {
+            return BASE_FILE_IO_ERROR;
+        }
+
+        int should_write_size = min_int(base_file->dev_inode_ctrl.block_size - base_file->current.current_offset,
+                                       count - writed_count);
+
+        memcpy(block_buf + base_file->current.current_offset, buf + writed_count, should_write_size);
+
+        success = block_write(base_file->dev_inode_ctrl.device,
+                                  base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                                  current_block,
+                                  block_buf);
+        if (!success) {
+            return BASE_FILE_IO_ERROR;
+        }
+
+        writed_count += should_write_size;
+        base_file->inode.size += should_write_size;
+        base_file_seek(base_file, base_file_tell(base_file) + should_write_size);
     }
     return BASE_FILE_IO_ERROR;
 }
@@ -226,9 +254,19 @@ static bool add_block(base_file_t* base_file, block_no_t* p_newblock)
 {
     /* NOTE: 目前的实现很啰嗦 =_= 而且如果分配了几个块后出现错误，会导致类似内存泄漏的块泄漏问题 以后再改吧 */
     /* FIXME:可能造成块泄漏 */
-    block_no_t last_block_relative = base_file_size(base_file) / base_file->dev_inode_ctrl.block_size;
-    int blocknos_per_block = num_per_indirect(base_file->dev_inode_ctrl.block_size);
     bool success;
+    if (base_file_size(base_file) == 0) {
+        /* 特殊处理为文件大小0的情况 */
+        success = alloc_block(base_file, &(base_file->inode.blocks[0]));
+        if (!success) {
+            return false;
+        }
+        *p_newblock = base_file->inode.blocks[0];
+        return true;
+    }
+
+    block_no_t last_block_relative = (base_file_size(base_file) - 1) / base_file->dev_inode_ctrl.block_size;
+    int blocknos_per_block = num_per_indirect(base_file->dev_inode_ctrl.block_size);
 
     struct block_info_s info;
     success = block_relative_to_block_info(base_file, last_block_relative, &info);
@@ -244,6 +282,8 @@ static bool add_block(base_file_t* base_file, block_no_t* p_newblock)
             if (!success) {
                 return false;
             }
+            *p_newblock = base_file->inode.blocks[last_block_relative + 1];
+            return true;
         } else if (info.level == 1) {
 
             return add_a_item_for_indirect(base_file, base_file->inode.single_indirect_block, info.index_in_block0, p_newblock);

@@ -15,7 +15,6 @@ typedef struct {
     /* 储存内部指针的底层信息 */
     struct {
         block_no_t current_block_relative;
-        block_no_t current_block;
         int current_offset;
     }current;
 }base_file_t;

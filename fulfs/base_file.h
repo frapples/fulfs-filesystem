@@ -4,11 +4,13 @@
 /* 本文件系统底层中一切皆文件，这里是底层的文件 */
 
 #include "inode.h"
+#include "superblock.h"
 
 typedef struct {
     dev_inode_ctrl_t dev_inode_ctrl;
     inode_no_t inode_no;
     inode_t inode;
+    superblock_t sb;
 
     /* 储存内部指针的底层信息 */
     struct {
@@ -18,7 +20,7 @@ typedef struct {
     }current;
 }base_file_t;
 
-bool base_file_open(base_file_t* base_file, dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t inode_no); /* 打开底层文件 */
+bool base_file_open(base_file_t* base_file, superblock_t* sb, dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t inode_no); /* 打开底层文件 */
 
 int base_file_mode(const base_file_t* base_file); /* 文件类型 */
 fsize_t base_file_size(const base_file_t* base_file); /* 文件大小 */

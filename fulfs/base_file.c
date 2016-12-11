@@ -10,9 +10,12 @@
 
 /* 索引等级。1级索引？2级索引？三级索引？ */
 static int indirect_level(const base_file_t* base_file,  block_no_t block_relative);
+/* 根据相对block号定位具体储存数据的block号 */
 static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t *p_block);
-static bool add_block(base_file_t* base_file);
+/* 给文件添加一个储存block */
+static bool add_block(base_file_t* base_file, block_no_t* p_newblock);
 
+/***********************************************/
 /* 用来标识文件的某个block */
 struct block_info_s
 {
@@ -24,15 +27,19 @@ struct block_info_s
     int index_in_block2;
 };
 static bool block_relative_to_block_info(const base_file_t* base_file, block_no_t block_relative, struct block_info_s* info);
+static bool add_a_item_for_indirect(base_file_t* base_file, block_no_t no, int size, block_no_t *p_block); /* 给一个间接块添加一项 */
+static bool alloc_block(base_file_t* base_file, block_no_t* p_block); /* 包装下data block那一挂参数的函数 =_= */
 
+/************************************************/
 static bool indirect_load(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[]);
 static bool indirect_dump(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[]);
 #define MAX_NUM_PER_INDIRECT (MAX_BYTES_PER_BLOCK / sizeof(block_no_t))
 static int num_per_indirect(int block_size);
 
-bool base_file_open(base_file_t* base_file, dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t inode_no)
+bool base_file_open(base_file_t* base_file, superblock_t* sb, dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t inode_no)
 {
     base_file->dev_inode_ctrl = *dev_inode_ctrl;
+    base_file->sb = *sb;
     bool success = inode_load(dev_inode_ctrl, inode_no, &(base_file->inode));
     if (!success) {
         return false;
@@ -214,9 +221,81 @@ static bool locate(base_file_t* base_file, block_no_t block_relative, block_no_t
     return true;
 }
 
-static bool add_block(base_file_t* base_file)
+static bool add_block(base_file_t* base_file, block_no_t* p_newblock)
 {
-    /* TODO */
+    block_no_t last_block_relative = base_file_size(base_file) / base_file->dev_inode_ctrl.block_size;
+    int blocknos_per_block = num_per_indirect(base_file->dev_inode_ctrl.block_size);
+    bool success;
+
+
+    if (indirect_level(base_file, last_block_relative) == indirect_level(base_file, last_block_relative + 1)) {
+        /* 加一个块不会导致启用更高的索引 */
+        struct block_info_s info;
+        success = block_relative_to_block_info(base_file, last_block_relative, &info);
+        if (!success) {
+            return false;
+        }
+
+        if (info.level == 0) {
+            success = alloc_block(base_file, &(base_file->inode.blocks[last_block_relative + 1]));
+            if (!success) {
+                return false;
+            }
+        } else if (info.level == 1) {
+
+            return add_a_item_for_indirect(base_file, base_file->inode.single_indirect_block, info.index_in_block0, p_newblock);
+
+        } else if (info.level == 2) {
+
+            if (info.index_in_block1 < blocknos_per_block - 1) {
+                /* 没满 */
+                return add_a_item_for_indirect(base_file, info.block_no_1, info.index_in_block1, p_newblock);
+            } else {
+                block_no_t block1;
+                success = add_a_item_for_indirect(base_file, base_file->inode.double_indirect_block, info.index_in_block0, &block1);
+                if (!success) {
+                    return false;
+                }
+                return add_a_item_for_indirect(base_file, block1, 0, p_newblock);
+            }
+
+        } else if (info.level == 3) {
+
+            if (info.index_in_block2 < blocknos_per_block - 1) {
+                /* 没满 */
+                return add_a_item_for_indirect(base_file, info.block_no_2, info.index_in_block2, p_newblock);
+            }
+
+            /* 需要额外分配一片新的第二跳 */
+            block_no_t block2;
+            if (info.index_in_block1 < blocknos_per_block - 1) {
+                success = add_a_item_for_indirect(base_file, info.block_no_1, info.index_in_block1, &block2);
+                if (!success) {
+                    return false;
+                }
+            } else {
+                block_no_t block1;
+                success = add_a_item_for_indirect(base_file, base_file->inode.triple_indirect_block, info.index_in_block0, &block1);
+                if (!success) {
+                    return false;
+                }
+                success = add_a_item_for_indirect(base_file, block1, 0, &block2);
+                if (!success) {
+                    return false;
+                }
+            }
+
+            return add_a_item_for_indirect(base_file, block2, 0, p_newblock);
+
+        } else {
+            assert(false);
+        }
+
+
+    } else {
+        /* TODO */
+    }
+    assert(false);
     return false;
 }
 
@@ -295,6 +374,27 @@ static bool block_relative_to_block_info(const base_file_t* base_file, block_no_
     assert(false);
 
 }
+
+static bool add_a_item_for_indirect(base_file_t* base_file, block_no_t no, int size, block_no_t *p_block)
+{
+    /* TODO */
+    return false;
+}
+
+static bool alloc_block(base_file_t* base_file, block_no_t* p_block)
+{
+    /* 保证出错时不修改p_block */
+    block_no_t block;
+    bool success = data_block_alloc(base_file->dev_inode_ctrl.device,
+                                    base_file->dev_inode_ctrl.block_size / BYTES_PER_SECTOR,
+                                    superblock_data_block_free_stack(&(base_file->sb)),
+                                    &block);
+    if (success) {
+        *p_block = block;
+    }
+    return success;
+}
+
 /************************************************/
 /* NOTE: 简单实现，未考虑字节序 */
 static bool indirect_load(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[])

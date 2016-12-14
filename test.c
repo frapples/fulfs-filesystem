@@ -6,6 +6,7 @@
 #include "device_io.h"
 #include "utils/sys.h"
 #include "utils/testtools.h"
+#include "fulfs/filesystem.h"
 
 #include <assert.h>
 
@@ -41,12 +42,35 @@ bool test_device_io(void)
     return true;
 }
 
+bool test_format(void)
+{
+    const char* path = "device_io_test.bin";
+    size_t file_size = 512 * 1024;
+    if (ft_filesize(path) != file_size) {
+        bool success = ft_create_bin_file(path, file_size);
+        assert(success);
+    }
+
+    int handle = device_add(path);
+    fulfs_errcode_t errcode = fulfs_format(handle, 4 * 1024 / 512);
+    TEST_ASSERT(errcode == FULFS_SUCCESS);
+
+    return true;
+}
+
+bool test_base_file(void)
+{
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
 
     TestFunc funcs[] = {
-    test_device_io
+        test_device_io,
+        test_format,
+        test_base_file
     };
     return test_main(funcs, sizeof(funcs) / sizeof(*funcs));
 }

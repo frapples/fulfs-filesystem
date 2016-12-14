@@ -5,13 +5,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define TEST_ASSERT(exp)                        \
-    do {                                        \
-        if (exp) {                              \
-            fprintf(stderr, "%s", #exp);        \
-            return false;                       \
-        }                                       \
-    } while(0)                                  \
+#define TEST_ASSERT(exp)                                                \
+    do {                                                                \
+        if (!(exp)) {                                                   \
+            fprintf(stderr, "Test error in %s:%d: %s\n", __FILE__, __LINE__, #exp); \
+            return false;                                               \
+        }                                                               \
+    } while(0)                                                          \
 
 typedef bool (*TestFunc)(void);
 

@@ -5,13 +5,14 @@
 
 #include "device_io.h"
 #include "utils/sys.h"
+#include "utils/testtools.h"
 
 #include <assert.h>
 
 void bytearray_rand(char* arr, size_t size);
 bool bytearray_equal(const char* a1, const char* a2, size_t size);
 
-int test_device_io(void)
+bool test_device_io(void)
 {
 
     const char* path = "device_io_test.bin";
@@ -29,27 +30,25 @@ int test_device_io(void)
 
     device_write(handle, 1, 1, rand_buf);
     device_read(handle, 1, 1, buf);
-    if (bytearray_equal(buf, rand_buf, 512)) {
-        return 0;
-    } else {
-        return -1;
-    }
+
+    TEST_ASSERT(bytearray_equal(buf, rand_buf, 512));
 
 
     device_write(handle, 120, 32, rand_buf);
     device_read(handle, 120, 32, buf);
-    if (bytearray_equal(buf, rand_buf, 512)) {
-        return 0;
-    } else {
-        return -1;
-    }
 
+    TEST_ASSERT(bytearray_equal(buf, rand_buf, 512));
+    return true;
 }
 
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
-    return test_device_io();
+
+    TestFunc funcs[] = {
+    test_device_io
+    };
+    return test_main(funcs, sizeof(funcs) / sizeof(*funcs));
 }
 
 

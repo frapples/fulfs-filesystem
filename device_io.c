@@ -19,7 +19,7 @@ int device_add(const char* path)
             device_handle[i] = FT_NEW(struct _device_s, 1);
 
             device_handle[i]->fp = fopen(path, "r+b");
-            device_handle[i]->section_count = ft_filesize(device_handle[i]->fp) /  BYTES_PER_SECTOR;
+            device_handle[i]->section_count = ft_filesize_from_fp(device_handle[i]->fp) /  BYTES_PER_SECTOR;
 
             return i;
         }

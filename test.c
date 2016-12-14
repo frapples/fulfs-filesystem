@@ -6,20 +6,24 @@
 #include "device_io.h"
 #include "utils/sys.h"
 
+#include <assert.h>
+
 void bytearray_rand(char* arr, size_t size);
 bool bytearray_equal(const char* a1, const char* a2, size_t size);
 
 int test_device_io(void)
 {
 
-    FILE* fp = fopen("device_io_test.bin", "r+b");
-    char buf[512 * 32] = {0};
-    for (int i = 0; i < 1024; i++) {
-        fwrite(buf, 512, 1, fp);
+    const char* path = "device_io_test.bin";
+    size_t file_size = 512 * 1024;
+    if (ft_filesize(path) != file_size) {
+        bool success = ft_create_bin_file(path, file_size);
+        assert(success);
     }
-    fclose(fp);
 
-    int handle = device_add("device_io_test.bin");
+    char buf[512 * 32] = {0};
+
+    int handle = device_add(path);
     char rand_buf[512 * 32];
     bytearray_rand(rand_buf, 512 * 32);
 

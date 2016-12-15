@@ -34,8 +34,8 @@ bool base_file_seek(base_file_t* base_file, fsize_t offset);
 fsize_t base_file_tell(const base_file_t* base_file);
 
 #define BASE_FILE_IO_ERROR -1
-int base_file_read(base_file_t* base_file, int count, char* buf);
-int base_file_write(base_file_t* base_file, int count, const char* buf);
+int base_file_read(base_file_t* base_file, char* buf, int count);
+int base_file_write(base_file_t* base_file, const char* buf, int count);
 
 bool base_file_truncate(base_file_t* base_file, fsize_t size); /* 把文件内容截断 */
 

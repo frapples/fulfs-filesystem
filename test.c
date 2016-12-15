@@ -10,6 +10,7 @@
 #include "fulfs/superblock.h"
 #include "fulfs/data_block.h"
 #include "fulfs/inode.h"
+#include "fulfs/base_file.h"
 
 #include <assert.h>
 
@@ -82,6 +83,34 @@ bool test_base_file(void)
 {
     const char* path = "device_io_test.bin";
     int device = device_add(path);
+
+    superblock_t sb;
+    TEST_ASSERT(superblock_load(device, &sb));
+
+    inode_no_t inode_no;
+    TEST_ASSERT(base_file_create(device, &sb, MODE_FILE, &inode_no));
+
+    base_file_t base_file;
+    TEST_ASSERT(base_file_open(&base_file, device, &sb, inode_no));
+    TEST_ASSERT(base_file_size(&base_file) == 0);
+    TEST_ASSERT(base_file_tell(&base_file) == 0);
+
+    int size = 1024 * 4 * 11;
+    char buf[1024 * 4 * 11];
+    char rand_buf[1024 * 4 * 11];
+
+    TEST_ASSERT(base_file_read(&base_file, buf, size) == 0);
+
+    bytearray_rand(rand_buf, size);
+    int res = base_file_write(&base_file, rand_buf, size);
+    TEST_ASSERT(res == size);
+    TEST_ASSERT(base_file_size(&base_file) == (fsize_t)size);
+    TEST_ASSERT(base_file_tell(&base_file) == (fsize_t)size);
+
+    base_file_seek(&base_file, 0);
+    res = base_file_read(&base_file, buf, size);
+    TEST_ASSERT(res == size);
+    TEST_ASSERT(bytearray_equal(buf, rand_buf, size));
 
     return true;
 }

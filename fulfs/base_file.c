@@ -4,9 +4,11 @@
 #include "data_block.h"
 #include "block.h"
 #include "../utils/math.h"
+#include "../utils/log.h"
 #include <string.h>
 
 #include <assert.h>
+
 
 /* TODO 关于时间的部分没管它 */
 
@@ -50,6 +52,7 @@ bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t
         return false;
     }
 
+    base_file->current.current_block_relative = 0;
     base_file->current.current_offset = 0;
     return true;
 }
@@ -95,7 +98,7 @@ fsize_t base_file_tell(const base_file_t* base_file)
         + base_file->current.current_offset;
 }
 
-int base_file_read(base_file_t* base_file, int count, char* buf)
+int base_file_read(base_file_t* base_file, char* buf, int count)
 {
     /* 保证接下来的count没有超过文件大小 */
     if (base_file_size(base_file) - base_file_tell(base_file) < (fsize_t)count) {
@@ -108,7 +111,9 @@ int base_file_read(base_file_t* base_file, int count, char* buf)
         block_no_t current_block;
         bool success = locate(base_file, base_file->current.current_block_relative, &current_block);
         if (!success) {
-            return BASE_FILE_IO_ERROR;
+            log_debug("定位文件block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->dev_inode_ctrl.device,
+                      base_file->inode_no, base_file->current.current_block_relative);
+            return readed_count;
         }
 
         success = block_read(base_file->dev_inode_ctrl.device,
@@ -116,7 +121,9 @@ int base_file_read(base_file_t* base_file, int count, char* buf)
                              current_block,
                              block_buf);
         if (!success) {
-            return BASE_FILE_IO_ERROR;
+            log_debug("读取块失败: %d号设备, 文件inode号%d, 块号%d\n", base_file->dev_inode_ctrl.device,
+                      base_file->inode_no, current_block);
+            return readed_count;
         }
 
         int should_read_size = min_int(base_file->dev_inode_ctrl.block_size - base_file->current.current_offset,
@@ -131,7 +138,7 @@ int base_file_read(base_file_t* base_file, int count, char* buf)
     return readed_count;
 }
 
-int base_file_write(base_file_t* base_file, int count, const char* buf)
+int base_file_write(base_file_t* base_file, const char* buf, int count)
 {
     char block_buf[MAX_BYTES_PER_BLOCK];
     int writed_count = 0;
@@ -142,12 +149,16 @@ int base_file_write(base_file_t* base_file, int count, const char* buf)
             /* FIXME: 这里有同样尴尬的问题，就是如果后续失败了这里分配的block怎么办 */
             bool success = add_block(base_file, &current_block);
             if (!success) {
-                return false;
+                log_debug("添加新block失败: %d号设备, 文件inode号%d\n", base_file->dev_inode_ctrl.device,
+                          base_file->inode_no);
+                return writed_count;
             }
         } else {
             bool success = locate(base_file, base_file->current.current_block_relative, &current_block);
             if (!success) {
-                return BASE_FILE_IO_ERROR;
+                log_debug("定位文件block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->dev_inode_ctrl.device,
+                          base_file->inode_no, base_file->current.current_block_relative);
+                return writed_count;
             }
         }
         bool success = block_read(base_file->dev_inode_ctrl.device,
@@ -155,7 +166,7 @@ int base_file_write(base_file_t* base_file, int count, const char* buf)
                                   current_block,
                                   block_buf);
         if (!success) {
-            return BASE_FILE_IO_ERROR;
+            return writed_count;
         }
 
         int should_write_size = min_int(base_file->dev_inode_ctrl.block_size - base_file->current.current_offset,
@@ -168,14 +179,14 @@ int base_file_write(base_file_t* base_file, int count, const char* buf)
                                   current_block,
                                   block_buf);
         if (!success) {
-            return BASE_FILE_IO_ERROR;
+            return writed_count;
         }
 
         writed_count += should_write_size;
         base_file->inode.size += should_write_size;
         base_file_seek(base_file, base_file_tell(base_file) + should_write_size);
     }
-    return BASE_FILE_IO_ERROR;
+    return writed_count;
 }
 
 bool base_file_close(base_file_t* base_file)

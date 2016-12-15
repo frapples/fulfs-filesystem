@@ -5,6 +5,7 @@
 #include "data_block.h"
 
 #include "../utils/math.h"
+#include "../utils/log.h"
 
 
 fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
@@ -20,6 +21,7 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
 
     if (block_count  <= 0 ||
         data_block >= block_count) {
+        log_debug("空间太小无法格式化");
         return FULFS_FAIL;
     }
 
@@ -32,20 +34,27 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
     inode_init(&inode);
 
     for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
-        if (inode_dump(&dev_inode_ctrl, i, &inode)) {
+        if (!inode_dump(&dev_inode_ctrl, i, &inode)) {
+            log_debug("inode写入失败: %d号设备, %d号inode", device, (int)i);
             return FULFS_FAIL;
         }
     }
 
     /* 初始化磁盘的data block区 */
-    block_no_t data_block_free_stack = data_blocks_init(device, sectors_per_block, data_block, block_count - data_block);
+    block_no_t data_block_free_stack;
+    bool success = data_blocks_init(device, sectors_per_block, data_block, block_count - data_block, &data_block_free_stack);
+    if (!success) {
+        log_debug("data_block区初始化失败: %d号设备", device);
+        return FULFS_FAIL;
+    }
 
     superblock_t sb;
     superblock_create(&sb, device_section_count(device), sectors_per_block,
                       inode_table, data_block, data_block_free_stack);
 
     /* 写入superblock */
-    if (superblock_dump(device, &sb)) {
+    if (!superblock_dump(device, &sb)) {
+        log_debug("superblock写入失败: %d号设备", device);
         return FULFS_FAIL;
     }
 

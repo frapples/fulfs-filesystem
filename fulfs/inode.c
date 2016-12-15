@@ -1,6 +1,7 @@
 #include "inode.h"
 
 #include "../utils/math.h"
+#include "../utils/log.h"
 #include "block.h"
 #include <assert.h>
 #include <string.h>
@@ -60,6 +61,7 @@ bool inode_dump(dev_inode_ctrl_t * dev_inode_ctrl, inode_no_t no, inode_t* inode
 
     bool sucess = block_write(dev_inode_ctrl->device, dev_inode_ctrl->block_size / BYTES_PER_SECTOR, block_no, buf);
     if (!sucess) {
+        log_debug("inode写入错误，block写入失败: %d", (int)block_no);
         return false;
     }
 
@@ -69,7 +71,7 @@ bool inode_dump(dev_inode_ctrl_t * dev_inode_ctrl, inode_no_t no, inode_t* inode
 /* 把inode号转为block号和block内偏移 */
 static void inode_no_to_block_no_and_offset(dev_inode_ctrl_t *dev_inode_ctrl, inode_no_t no, block_no_t* p_block_no, size_t* p_offset)
 {
-    assert(no < dev_inode_ctrl->size);
+    assert(no < INODE_MAX_COUNT);
 
     int inode_num_per_block = dev_inode_ctrl->block_size / inode_bin_size();
     int inode_blocksize = inode_block_count(dev_inode_ctrl->block_size, INODE_MAX_COUNT);

@@ -45,7 +45,7 @@ bool test_device_io(void)
 bool test_format(void)
 {
     const char* path = "device_io_test.bin";
-    size_t file_size = 512 * 1024;
+    size_t file_size = 32 * 1024 * 1024;
     if (ft_filesize(path) != file_size) {
         bool success = ft_create_bin_file(path, file_size);
         assert(success);

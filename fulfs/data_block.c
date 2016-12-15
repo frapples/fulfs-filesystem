@@ -28,7 +28,7 @@ static void group_dump(const struct group_s* group, char* buf) {
 }
 
 
-block_no_t data_blocks_init(device_handle_t device, int sectors_per_block, block_no_t data_block_start, block_no_t data_block_count)
+bool data_blocks_init(device_handle_t device, int sectors_per_block, block_no_t data_block_start, block_no_t data_block_count, block_no_t* p_start)
 {
     block_no_t next = data_block_start;
     for (block_no_t block = data_block_start + 1; block < data_block_start + data_block_count; block += MAX_GROUP_COUNT) {
@@ -47,10 +47,14 @@ block_no_t data_blocks_init(device_handle_t device, int sectors_per_block, block
 
         char buf[MAX_BYTES_PER_BLOCK];
         group_dump(&group, buf);
-        block_write(device, sectors_per_block, next, buf);
+        bool success = block_write(device, sectors_per_block, next, buf);
+        if (!success) {
+            return false;
+        }
         next = GROUP_NEXT(group);
     }
-    return data_block_start;
+    *p_start = data_block_start;
+    return true;
 }
 
 bool data_block_alloc(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_block)

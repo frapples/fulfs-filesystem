@@ -16,13 +16,13 @@ void superblock_dump_to_bin(superblock_t* sb, char* bin, size_t bin_size)
 {
     assert(bin_size >= superblock_bin_size());
 
-    *sb = *(superblock_t *)bin;
+    *(superblock_t *)bin = *sb;
     memset(bin + superblock_bin_size(), 0, bin_size - superblock_bin_size());
 }
 
 void superblock_load_from_bin(const char* bin, superblock_t* sb)
 {
-    *(superblock_t *)bin = *sb;
+    *sb = *(superblock_t *)bin;
 }
 
 void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_block,
@@ -44,8 +44,12 @@ void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_bl
 
 bool superblock_load(device_handle_t device, superblock_t* sb)
 {
-    /* TODO */
-    assert(false);
+    char buf[512];
+    bool success = DEVICE_IO_SUCCESS(device_read(device, 0, 1, buf));
+    if (!success) {
+        return false;
+    }
+    superblock_load_from_bin(buf, sb);
 
     return true;
 }

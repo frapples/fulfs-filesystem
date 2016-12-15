@@ -54,10 +54,23 @@ bool test_format(void)
         assert(success);
     }
 
-    int handle = device_add(path);
-    fulfs_errcode_t errcode = fulfs_format(handle, 4 * 1024 / 512);
+    int device = device_add(path);
+    fulfs_errcode_t errcode = fulfs_format(device, 4 * 1024 / 512);
     TEST_ASSERT(errcode == FULFS_SUCCESS);
 
+    superblock_t sb;
+    TEST_ASSERT(superblock_load(device, &sb));
+    TEST_ASSERT(superblock_block_size(&sb) == 4 * 1024);
+    TEST_ASSERT(superblock_used_size(&sb) == 0);
+
+
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, &sb);
+    inode_t inode;
+    for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
+        TEST_ASSERT(inode_load(&dev_inode_ctrl, i, &inode));
+        TEST_ASSERT(inode.mode == 0);
+    }
     return true;
 }
 

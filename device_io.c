@@ -1,10 +1,13 @@
 #include "device_io.h"
 #include<stdio.h>
+#include<string.h>
 
 #include"memory/alloc.h"
 #include"utils/sys.h"
+#include"utils/log.h"
 
 struct _device_s{
+    const char* path;
     FILE* fp;
     sector_no_t section_count;
 };
@@ -14,10 +17,18 @@ struct _device_s* device_handle[MAX_DEVICE_COUNT] = {NULL};
 
 int device_add(const char* path)
 {
+    /* 已经挂载的文件就不允许别人挂载了 */
+    for (int i = 0; i < MAX_DEVICE_COUNT; i++) {
+        if (device_handle[i] != NULL && strcmp(device_handle[i]->path, path) == 0) {
+            log_info("%s文件已经被当成设备挂载了，请先卸载", path);
+            return DEVICE_IO_ERROR;
+        }
+    }
+
     for (int i = 0; i < MAX_DEVICE_COUNT; i++) {
         if (device_handle[i] == NULL) {
             device_handle[i] = FT_NEW(struct _device_s, 1);
-
+            device_handle[i]->path = path;
             device_handle[i]->fp = fopen(path, "r+b");
             device_handle[i]->section_count = ft_filesize_from_fp(device_handle[i]->fp) /  BYTES_PER_SECTOR;
 

@@ -42,6 +42,8 @@ bool test_device_io(void)
     device_read(handle, 120, 32, buf);
 
     TEST_ASSERT(bytearray_equal(buf, rand_buf, 512));
+
+    device_del(handle);
     return true;
 }
 
@@ -71,6 +73,8 @@ bool test_format(void)
         TEST_ASSERT(inode_load(&dev_inode_ctrl, i, &inode));
         TEST_ASSERT(inode.mode == 0);
     }
+
+    device_del(device);
     return true;
 }
 

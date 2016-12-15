@@ -25,9 +25,9 @@ int base_file_mode(const base_file_t* base_file); /* 文件类型 */
 fsize_t base_file_size(const base_file_t* base_file); /* 文件大小 */
 
 /* 时间属性 */
-time_t base_file_accessed_time(const base_file_t* base_file);
-time_t base_file_modified_time(const base_file_t* base_file);
-time_t base_file_created_time(const base_file_t* base_file);
+timestamp_t base_file_accessed_time(const base_file_t* base_file);
+timestamp_t base_file_modified_time(const base_file_t* base_file);
+timestamp_t base_file_created_time(const base_file_t* base_file);
 
 /* IO */
 bool base_file_seek(base_file_t* base_file, fsize_t offset);

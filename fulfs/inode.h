@@ -29,9 +29,9 @@ typedef struct
     block_no_t single_indirect_block;
     block_no_t double_indirect_block;
     block_no_t triple_indirect_block;
-    time_t accessed_time;
-    time_t modified_time;
-    time_t created_time;
+    timestamp_t accessed_time;
+    timestamp_t modified_time;
+    timestamp_t created_time;
 }inode_t;
 
 enum {

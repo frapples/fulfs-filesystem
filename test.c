@@ -7,6 +7,9 @@
 #include "utils/sys.h"
 #include "utils/testtools.h"
 #include "fulfs/filesystem.h"
+#include "fulfs/superblock.h"
+#include "fulfs/data_block.h"
+#include "fulfs/inode.h"
 
 #include <assert.h>
 

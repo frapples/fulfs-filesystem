@@ -60,17 +60,17 @@ fsize_t base_file_size(const base_file_t* base_file)
     return base_file->inode.size;
 }
 
-time_t base_file_accessed_time(const base_file_t* base_file)
+timestamp_t base_file_accessed_time(const base_file_t* base_file)
 {
     return base_file->inode.accessed_time;
 }
 
-time_t base_file_modified_time(const base_file_t* base_file)
+timestamp_t base_file_modified_time(const base_file_t* base_file)
 {
     return base_file->inode.modified_time;
 }
 
-time_t base_file_created_time(const base_file_t* base_file)
+timestamp_t base_file_created_time(const base_file_t* base_file)
 {
     return base_file->inode.created_time;
 }

@@ -80,6 +80,9 @@ bool test_format(void)
 
 bool test_base_file(void)
 {
+    const char* path = "device_io_test.bin";
+    int device = device_add(path);
+
     return true;
 }
 

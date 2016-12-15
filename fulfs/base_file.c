@@ -8,6 +8,10 @@
 
 #include <assert.h>
 
+/* TODO 关于时间的部分没管它 */
+
+static bool base_file_del(device_handle_t device, superblock_t* sb, inode_no_t inode_no);
+
 /* 索引等级。1级索引？2级索引？三级索引？ */
 static int indirect_level(const base_file_t* base_file,  block_no_t block_relative);
 /* 根据相对block号定位具体储存数据的block号 */
@@ -37,11 +41,11 @@ static bool indirect_dump(device_handle_t device, int sectors_per_block, block_n
 #define MAX_NUM_PER_INDIRECT (MAX_BYTES_PER_BLOCK / sizeof(block_no_t))
 static int num_per_indirect(int block_size);
 
-bool base_file_open(base_file_t* base_file, superblock_t* sb, dev_inode_ctrl_t* dev_inode_ctrl, inode_no_t inode_no)
+bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t* sb, inode_no_t inode_no)
 {
-    base_file->dev_inode_ctrl = *dev_inode_ctrl;
+    dev_inode_ctrl_init_from_superblock(&(base_file->dev_inode_ctrl), device, sb);
     base_file->sb = *sb;
-    bool success = inode_load(dev_inode_ctrl, inode_no, &(base_file->inode));
+    bool success = inode_load(&(base_file->dev_inode_ctrl), inode_no, &(base_file->inode));
     if (!success) {
         return false;
     }
@@ -179,7 +183,135 @@ bool base_file_close(base_file_t* base_file)
     return inode_dump(&(base_file->dev_inode_ctrl), base_file->inode_no, &(base_file->inode));
 }
 
+bool base_file_create(device_handle_t device, superblock_t* sb, int mode, inode_no_t* p_inode_no)
+{
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
+
+    bool success = inode_alloc(&dev_inode_ctrl, p_inode_no);
+    if (!success) {
+        return false;
+    }
+
+    inode_t inode;
+    success = inode_load(&dev_inode_ctrl, *p_inode_no, &inode);
+    if (!success) {
+        return false;
+    }
+
+    inode.mode = mode;
+    inode.size = 0;
+    inode.link_count = 1;
+
+    success = inode_dump(&dev_inode_ctrl, *p_inode_no, &inode);
+    if (!success) {
+        return false;
+    }
+
+    return true;
+}
+
+bool base_file_ref(device_handle_t device, superblock_t* sb, inode_no_t inode_no)
+{
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
+
+    inode_t inode;
+    bool success = inode_load(&dev_inode_ctrl, inode_no, &inode);
+    if (!success) {
+        return false;
+    }
+
+    inode.link_count++;
+
+    success = inode_dump(&dev_inode_ctrl, inode_no, &inode);
+    if (!success) {
+        return false;
+    }
+
+    return true;
+}
+
+bool base_file_unref(device_handle_t device, superblock_t* sb, inode_no_t inode_no)
+{
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
+
+    inode_t inode;
+    bool success = inode_load(&dev_inode_ctrl, inode_no, &inode);
+    if (!success) {
+        return false;
+    }
+
+    inode.link_count--;
+    if (inode.link_count > 0) {
+        success = inode_dump(&dev_inode_ctrl, inode_no, &inode);
+        if (!success) {
+            return false;
+        }
+    } else {
+        return base_file_del(device, sb, inode_no);
+    }
+
+    return true;
+}
+
+bool base_file_truncate(base_file_t* base_file, fsize_t size)
+{
+    /* 这个函数要保证出错时不破坏完整性 */
+    if (base_file->inode.size > size) {
+
+        assert(base_file->inode.size > 0);
+
+        int block_size = base_file->dev_inode_ctrl.block_size;
+
+        block_no_t block_num = count_groups(base_file->inode.size, block_size);
+        block_no_t should_block_num = count_groups(size, block_size);
+
+        for (block_no_t i = 0; i < block_num - should_block_num; i++) {
+
+            block_no_t block_relative = (block_num - 1) - i;
+
+            block_no_t block;
+            bool success = locate(base_file, block_relative, &block);
+            if (!success) {
+                return false;
+            }
+            success = free_block(base_file, block);
+            if (!success) {
+                return false;
+            }
+            base_file->inode.size -= block_size;
+        }
+
+        base_file->inode.size = size;
+        return true;
+
+    } else {
+        return true;
+    }
+}
+
 /*********************************/
+static bool base_file_del(device_handle_t device, superblock_t* sb, inode_no_t inode_no)
+{
+    base_file_t base_file;
+    bool success = base_file_open(&base_file, device, sb, inode_no);
+    if (!success) {
+        return false;
+    }
+    /* 释放block */
+    success = base_file_truncate(&base_file, 0);
+    if (!success) {
+        return false;
+    }
+    base_file_close(&base_file);
+
+    /* 释放inode */
+    inode_free(&(base_file.dev_inode_ctrl), inode_no);
+    return true;
+}
+
 static int indirect_level(const base_file_t* base_file,  block_no_t block_relative)
 {
     block_no_t level_0_max_block_count = (fsize_t)(LEVEL_0_INDIRECT_COUNT);

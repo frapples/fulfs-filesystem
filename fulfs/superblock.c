@@ -135,3 +135,8 @@ size_t superblock_block_size(const superblock_t* sb)
 {
     return sb->sectors_per_block * BYTES_PER_SECTOR;
 }
+
+int superblock_sectors_per_block(const superblock_t *sb)
+{
+    return sb->sectors_per_block;
+}

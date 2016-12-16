@@ -146,8 +146,6 @@ bool test_base_file(void)
     base_file_seek(&base_file, 0);
     res = base_file_read(&base_file, buf, size);
     TEST_ASSERT(res == size);
-    bytearray_dump(buf + 1024 * 4 * 10, 100);
-    bytearray_dump(rand_buf + 1024 * 4 * 10, 100);
     TEST_ASSERT(bytearray_equal(buf, rand_buf, size));
 
     return true;

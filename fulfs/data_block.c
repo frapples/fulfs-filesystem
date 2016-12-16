@@ -32,7 +32,7 @@ bool data_blocks_init(device_handle_t device, int sectors_per_block, block_no_t 
 {
     block_no_t next = data_block_start;
     for (block_no_t block = data_block_start + 1; block < data_block_start + data_block_count; block += MAX_GROUP_COUNT) {
-        bool is_end = (data_block_start + data_block_count - block) > MAX_GROUP_COUNT;
+        bool is_end = (data_block_start + data_block_count - block) <= MAX_GROUP_COUNT;
 
         struct group_s group;
         group.top =  is_end ? MAX_GROUP_COUNT : (data_block_start + data_block_count - block);

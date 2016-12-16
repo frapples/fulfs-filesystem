@@ -7,7 +7,7 @@
 #include "superblock.h"
 
 typedef struct {
-    dev_inode_ctrl_t dev_inode_ctrl;
+    device_handle_t device;
     inode_no_t inode_no;
     inode_t inode;
     superblock_t sb;

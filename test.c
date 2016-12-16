@@ -95,9 +95,9 @@ bool test_base_file(void)
     TEST_ASSERT(base_file_size(&base_file) == 0);
     TEST_ASSERT(base_file_tell(&base_file) == 0);
 
-    int size = 1024 * 4 * 11;
-    char buf[1024 * 4 * 11];
-    char rand_buf[1024 * 4 * 11];
+    int size = 1024 * 4 * 10;
+    char buf[1024 * 4 * 10];
+    char rand_buf[1024 * 4 * 10];
 
     TEST_ASSERT(base_file_read(&base_file, buf, size) == 0);
 
@@ -144,3 +144,4 @@ void bytearray_rand(char* arr, size_t size)
         arr[i] = rand() % 64;
     }
 }
+

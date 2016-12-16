@@ -53,7 +53,7 @@ bool base_block_file_locate(device_handle_t device,  superblock_t* sb, inode_t* 
 bool base_block_file_push_block(device_handle_t device, superblock_t* sb, inode_t* inode, block_no_t* p_block)
 {
     /* 目前的block个数 */
-    block_no_t block_count = count_groups(inode->size, num_per_indirect(superblock_block_size(sb)));
+    block_no_t block_count = count_groups(inode->size, superblock_block_size(sb));
 
     int blocknos_per_block = num_per_indirect(superblock_block_size(sb));
     block_no_t level_0_max_block_count = (fsize_t)(LEVEL_0_INDIRECT_COUNT);
@@ -64,7 +64,9 @@ bool base_block_file_push_block(device_handle_t device, superblock_t* sb, inode_
     int sectors_per_block = superblock_sectors_per_block(sb);
     block_no_t data_block_stack = superblock_data_block_free_stack(sb);
     if (block_count < level_0_max_block_count) {
-        return data_block_alloc(device, sectors_per_block, data_block_stack, &(inode->blocks[block_count]));
+        bool success = data_block_alloc(device, sectors_per_block, data_block_stack, p_block);
+        inode->blocks[block_count] = *p_block;
+        return success;
     } else if (block_count < level_1_max_block_count) {
         return add(device, sectors_per_block, data_block_stack, &inode->single_indirect_block, 1, block_count - level_0_max_block_count, p_block);
     } else if (block_count < level_2_max_block_count) {

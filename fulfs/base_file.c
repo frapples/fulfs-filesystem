@@ -18,6 +18,7 @@ static bool base_file_del(device_handle_t device, superblock_t* sb, inode_no_t i
 bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t* sb, inode_no_t inode_no)
 {
     base_file->device = device;
+    base_file->inode_no = inode_no;
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
     base_file->sb = *sb;
@@ -122,7 +123,9 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
         if (base_file_tell(base_file) == base_file_size(base_file)) {
             bool success = base_block_file_push_block(base_file->device, &base_file->sb, &base_file->inode, &current_block);
             if (!success) {
-                return false;
+                log_debug("分配新block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->device,
+                          base_file->inode_no, base_file->current.current_block_relative);
+                return writed_count;
             }
         } else {
             bool success = base_block_file_locate(base_file->device, &base_file->sb, &base_file->inode, base_file->current.current_block_relative, &current_block);
@@ -132,6 +135,7 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
                 return writed_count;
             }
         }
+
         bool success = block_read(base_file->device, sectors_per_block, current_block, block_buf);
         if (!success) {
             return writed_count;

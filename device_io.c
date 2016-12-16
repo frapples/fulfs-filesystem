@@ -43,6 +43,7 @@ int device_add(const char* path)
 void device_del(device_handle_t handle)
 {
     if (handle < MAX_DEVICE_COUNT && handle >= 0 && device_handle[handle] != NULL) {
+        fclose(device_handle[handle]->fp);
         ft_free(device_handle[handle]);
         device_handle[handle] = NULL;
     }

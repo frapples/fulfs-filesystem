@@ -47,6 +47,9 @@ bool data_blocks_init(device_handle_t device, int sectors_per_block, block_no_t 
 
         char buf[MAX_BYTES_PER_BLOCK];
         group_dump(&group, buf);
+
+        assert(next >= data_block_start);
+
         bool success = block_write(device, sectors_per_block, next, buf);
         if (!success) {
             return false;

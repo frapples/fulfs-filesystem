@@ -13,6 +13,7 @@ typedef uint32_t block_no_t;
 
 static inline bool block_read(device_handle_t device, int sectors_per_block, block_no_t no, char* buf)
 {
+
     bool success = DEVICE_IO_SUCCESS(device_read(device, no * sectors_per_block, sectors_per_block, buf));
 
     if (!success) {
@@ -23,6 +24,9 @@ static inline bool block_read(device_handle_t device, int sectors_per_block, blo
 
 static inline bool block_write(device_handle_t device, int sectors_per_block, block_no_t no, const char* buf)
 {
+    if (no == 0) {
+        log_warning("写入%d号设备的0号块（可能是superblock所在块）\n", device);
+    }
 
     bool success = DEVICE_IO_SUCCESS(device_write(device, no * sectors_per_block, sectors_per_block, buf));
 

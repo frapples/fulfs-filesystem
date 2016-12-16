@@ -75,12 +75,12 @@ static void inode_no_to_block_no_and_offset(dev_inode_ctrl_t *dev_inode_ctrl, in
 
     int inode_num_per_block = dev_inode_ctrl->block_size / inode_bin_size();
     int inode_blocksize = inode_block_count(dev_inode_ctrl->block_size, INODE_MAX_COUNT);
-    int block_offset = inode_block_count(dev_inode_ctrl->block_size, no) - 1;
+    int block_relative = no / inode_num_per_block;
 
-    assert(block_offset < inode_blocksize);
+    assert(block_relative < inode_blocksize);
 
-    *p_block_no = dev_inode_ctrl->start + block_offset;
-    *p_offset = (no - (inode_num_per_block * block_offset)) * inode_bin_size();
+    *p_block_no = dev_inode_ctrl->start + block_relative;
+    *p_offset = (no - (inode_num_per_block * block_relative)) * inode_bin_size();
 }
 
 int inode_block_count(size_t block_size, int inode_count)

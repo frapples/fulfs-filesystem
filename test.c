@@ -108,6 +108,9 @@ bool test_base_block_file(void)
         TEST_INT_EQUAL(block_1, block_2);
     }
 
+    /* =_= 还是有错误 测试是否0号块被修改了 */
+    TEST_ASSERT(superblock_load(device, &sb));
+    TEST_ASSERT(sb.data_block_free_stack != 0);
     device_del(device);
     return true;
 }

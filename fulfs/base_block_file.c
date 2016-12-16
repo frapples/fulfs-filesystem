@@ -2,6 +2,7 @@
 
 #include "../utils/math.h"
 
+#include <string.h>
 #include <assert.h>
 
 
@@ -115,7 +116,8 @@ static bool locate(device_handle_t device, int sectors_per_block, block_no_t fir
 {
     if (level == 0) {
 
-        return first;
+        *p_block = first;
+        return true;
 
     } else {
 
@@ -141,8 +143,6 @@ static bool locate(device_handle_t device, int sectors_per_block, block_no_t fir
 
 static bool add(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size, block_no_t* p_block)
 {
-    assert(size > 0);
-
     if (level == 0) {
         bool success = data_block_alloc(device, sectors_per_block, data_blocks_stack, p_block);
         if (!success) {
@@ -160,12 +160,15 @@ static bool add(device_handle_t device, int sectors_per_block, block_no_t data_b
         if (offset == 0) {
             /* 上一级没有空余了 */
             bool success = add(device, sectors_per_block, data_blocks_stack,
-                               p_first, level - 1, (size - 1) / blocknos_per_block + 1, &block);
+                               p_first, level - 1, count_groups(size, blocknos_per_block), &block);
             if (!success) {
                 return false;
             }
         } else {
-            bool success = locate(device, sectors_per_block, *p_first, level - 1, size / blocknos_per_block, &block);
+
+            assert(size > 0);
+
+            bool success = locate(device, sectors_per_block, *p_first, level - 1, (size - 1) / blocknos_per_block, &block);
             if (!success) {
                 return false;
             }
@@ -186,6 +189,7 @@ static bool add(device_handle_t device, int sectors_per_block, block_no_t data_b
         if (!success) {
             return false;
         }
+        *p_block = blocks[offset];
         return true;
     }
 }
@@ -235,10 +239,7 @@ static bool indirect_load(device_handle_t device, int sectors_per_block, block_n
         return false;
     }
 
-    int num = num_per_indirect(sectors_per_block * BYTES_PER_SECTOR);
-    for (int i = 0; i < num; i++) {
-        blocks[i] = *(buf + sizeof(block_no_t));
-    }
+    memcpy(blocks, buf, sectors_per_block * BYTES_PER_SECTOR);
 
     return true;
 }
@@ -247,10 +248,8 @@ static bool indirect_dump(device_handle_t device, int sectors_per_block, block_n
 {
     char buf[MAX_BYTES_PER_BLOCK];
 
-    int num = num_per_indirect(sectors_per_block * BYTES_PER_SECTOR);
-    for (int i = 0; i < num; i++) {
-        *(buf + sizeof(block_no_t)) = blocks[i];
-    }
+    memcpy(buf, blocks, sectors_per_block * BYTES_PER_SECTOR);
+
     return block_write(device, sectors_per_block, block, buf);
 }
 

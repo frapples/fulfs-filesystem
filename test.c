@@ -11,11 +11,14 @@
 #include "fulfs/data_block.h"
 #include "fulfs/inode.h"
 #include "fulfs/base_file.h"
+#include "fulfs/base_block_file.h"
+#include "utils/log.h"
 
 #include <assert.h>
 
 void bytearray_rand(char* arr, size_t size);
 bool bytearray_equal(const char* a1, const char* a2, size_t size);
+void bytearray_dump(const char* arr, size_t size);
 
 bool test_device_io(void)
 {
@@ -65,6 +68,8 @@ bool test_format(void)
     TEST_ASSERT(superblock_load(device, &sb));
     TEST_ASSERT(superblock_block_size(&sb) == 4 * 1024);
     TEST_ASSERT(superblock_used_size(&sb) == 0);
+    log_info("测试的文件系统data block范围:[%ld, %ld)\n", superblock_data_block_start(&sb),
+             superblock_data_block_start(&sb) + superblock_data_block_size(&sb));
 
 
     dev_inode_ctrl_t dev_inode_ctrl;
@@ -73,6 +78,34 @@ bool test_format(void)
     for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
         TEST_ASSERT(inode_load(&dev_inode_ctrl, i, &inode));
         TEST_ASSERT(inode.mode == 0);
+    }
+
+    device_del(device);
+    return true;
+}
+
+bool test_base_block_file(void)
+{
+    const char* path = "device_io_test.bin";
+    int device = device_add(path);
+
+    superblock_t sb;
+    TEST_ASSERT(superblock_load(device, &sb));
+
+    inode_no_t inode_no;
+    TEST_ASSERT(base_file_create(device, &sb, MODE_FILE, &inode_no));
+
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, &sb);
+    inode_t inode;
+    TEST_ASSERT(inode_load(&dev_inode_ctrl, inode_no, &inode));
+
+    for (int i = 0; i < 32; i++) {
+        block_no_t block_1, block_2;
+        TEST_ASSERT(base_block_file_push_block(device, &sb, &inode, &block_1));
+        inode.size = (i + 1) * superblock_block_size(&sb);
+        TEST_ASSERT(base_block_file_locate(device, &sb, &inode, i, &block_2));
+        TEST_INT_EQUAL(block_1, block_2);
     }
 
     device_del(device);
@@ -95,9 +128,9 @@ bool test_base_file(void)
     TEST_ASSERT(base_file_size(&base_file) == 0);
     TEST_ASSERT(base_file_tell(&base_file) == 0);
 
-    int size = 1024 * 4 * 10;
-    char buf[1024 * 4 * 10];
-    char rand_buf[1024 * 4 * 10];
+    int size = 1024 * 4 * 30;
+    char buf[1024 * 4 * 30];
+    char rand_buf[1024 * 4 * 30];
 
     TEST_ASSERT(base_file_read(&base_file, buf, size) == 0);
 
@@ -110,6 +143,8 @@ bool test_base_file(void)
     base_file_seek(&base_file, 0);
     res = base_file_read(&base_file, buf, size);
     TEST_ASSERT(res == size);
+    bytearray_dump(buf + 1024 * 4 * 10, 100);
+    bytearray_dump(rand_buf + 1024 * 4 * 10, 100);
     TEST_ASSERT(bytearray_equal(buf, rand_buf, size));
 
     return true;
@@ -122,6 +157,7 @@ int main(int argc, char *argv[])
     TestFunc funcs[] = {
         test_device_io,
         test_format,
+        test_base_block_file,
         test_base_file
     };
     return test_main(funcs, sizeof(funcs) / sizeof(*funcs));
@@ -145,3 +181,14 @@ void bytearray_rand(char* arr, size_t size)
     }
 }
 
+
+void bytearray_dump(const char* arr, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        printf(" %3u ", (unsigned int)arr[i]);
+        if ((i + 1) % 20 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}

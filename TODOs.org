@@ -10,6 +10,8 @@ shell 层
 --------------------
 底层文件操作（该文件系统底层一切皆文件）
 ------------------------------
+底层块文件操作（以块为单位的文件）
+------------------------------
 文件系统实现-和数据有关的数据结构
 文件系统元信息 | inode 管理 | data-block 管理
 --------------------
@@ -33,6 +35,7 @@ io_write()　向模拟磁盘的扇区中写入内容
       struct1 [shape=record, label="系统调用层：| <f0>磁盘挂载 |<f4>文件系统操作 |<f1> 文件操作 |<f2> 目录操作|<f3> 软链接操作"];
       struct2 [shape=record, label="具体文件系统层(可多个)：|<f4>文件系统操作|<f1> 文件操作 |<f2> 目录操作|<f3> 软链接操作"];
       struct3 [shape=record, label="底层文件层：| 底层文件读写"];
+      struct8 [shape=record, label="块文件层：| 底层块文件读写"];
 
       struct4 [shape=record, label="底层数据结构： | <f1> superblock | <f2> inode | <f3> data block"];
 
@@ -51,9 +54,10 @@ io_write()　向模拟磁盘的扇区中写入内容
       
       struct2:f4 -> struct4:f1;
 
-      struct3 -> struct4:f1;
-      struct3 -> struct4:f2;
-      struct3 -> struct4:f3;
+      struct3 -> struct8;
+      struct8 -> struct4:f1;
+      struct8 -> struct4:f2;
+      struct8 -> struct4:f3;
 
       struct4:f1 -> struct5;
       struct4:f2 -> struct5;

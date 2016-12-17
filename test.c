@@ -22,7 +22,6 @@ void bytearray_dump(const char* arr, size_t size);
 
 bool test_device_io(void)
 {
-
     const char* path = "device_io_test.bin";
     size_t file_size = 512 * 1024;
     if (ft_filesize(path) != file_size) {

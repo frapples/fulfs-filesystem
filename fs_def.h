@@ -6,8 +6,10 @@
 /* 这里面定义的函数接口，所有的文件系统应该要遵循此接口 */
 
 typedef int64_t fs_off_t;
+#define FS_MAX_FILE_PATH 2048
 
 #define FS_ERROR -1
+#define FS_MAX_PATH
 
 enum {
     FS_SEEK_SET,

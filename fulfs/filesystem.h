@@ -2,6 +2,7 @@
 #define __FULFS__FILESYSETM__H__
 
 #include <stdint.h>
+#include "superblock.h"
 #include "block.h"
 #include "../device_io.h"
 /*
@@ -17,8 +18,16 @@ typedef enum {
     /* 未来可以添加更多错误信息 */
 }fulfs_errcode_t;
 
+typedef struct {
+    superblock_t sb;
+}fulfs_filesystem_t;
+
+
+bool fulfs_filesystem_init(fulfs_filesystem_t* fs, device_handle_t device);
+
 /* 将设备device格式化 */
 fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block);
+
 
 
 

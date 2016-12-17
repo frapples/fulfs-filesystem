@@ -60,3 +60,8 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
 
     return FULFS_SUCCESS;
 }
+
+bool fulfs_filesystem_init(fulfs_filesystem_t* fs, device_handle_t device)
+{
+    return superblock_load(device, &fs->sb);
+}

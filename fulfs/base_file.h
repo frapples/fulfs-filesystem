@@ -10,7 +10,7 @@ typedef struct {
     device_handle_t device;
     inode_no_t inode_no;
     inode_t inode;
-    superblock_t sb;
+    superblock_t* sb;
 
     /* 储存内部指针的底层信息 */
     struct {
@@ -19,7 +19,8 @@ typedef struct {
     }current;
 }base_file_t;
 
-bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t* sb, inode_no_t inode_no); /* 打开底层文件 */
+/* 打开底层文件, 注意：spuerblock的内存使用由用户决定 */
+bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t* sb, inode_no_t inode_no); 
 
 int base_file_mode(const base_file_t* base_file); /* 文件类型 */
 fsize_t base_file_size(const base_file_t* base_file); /* 文件大小 */

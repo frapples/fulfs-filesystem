@@ -20,7 +20,7 @@ typedef struct {
 }base_file_t;
 
 /* 打开底层文件, 注意：spuerblock的内存使用由用户决定 */
-bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t* sb, inode_no_t inode_no); 
+bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t* sb, inode_no_t inode_no);
 
 int base_file_mode(const base_file_t* base_file); /* 文件类型 */
 fsize_t base_file_size(const base_file_t* base_file); /* 文件大小 */
@@ -41,6 +41,9 @@ int base_file_write(base_file_t* base_file, const char* buf, int count);
 bool base_file_truncate(base_file_t* base_file, fsize_t size); /* 把文件内容截断 */
 
 bool base_file_close(base_file_t* base_file);
+
+int base_file_ref_count(base_file_t* base_file);
+bool base_file_block_count(base_file_t* base_file, long* count);
 
 bool base_file_create(device_handle_t device, superblock_t* sb, int mode, inode_no_t* p_inode_no); /* 创建底层文件 */
 

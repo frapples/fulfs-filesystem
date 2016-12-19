@@ -269,6 +269,18 @@ bool base_file_truncate(base_file_t* base_file, fsize_t size)
     }
 }
 
+
+int base_file_ref_count(base_file_t* base_file)
+{
+    return base_file->inode.link_count;
+}
+
+bool base_file_block_count(base_file_t* base_file, long* count)
+{
+    assert(false && "未实现");
+    return false;
+}
+
 /*********************************/
 static bool base_file_del(device_handle_t device, superblock_t* sb, inode_no_t inode_no)
 {

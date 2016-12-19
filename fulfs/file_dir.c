@@ -12,17 +12,27 @@ static bool dir_locate(device_handle_t device, fulfs_filesystem_t* fs, inode_no_
 static bool dir_add(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t dir, const char* name, inode_no_t no);
 static bool dir_del(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t dir, const char* name);
 static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t start, const char* relative_path, bool* p_exist, inode_no_t* p_no);
+static bool dir_roottree_locate(device_handle_t device, fulfs_filesystem_t* fs, const char* path, bool* p_exist, inode_no_t* p_no);
+
+/* -------------------- */
+#define DIR_ITEM_NAME_SIZE 14
+#define DIR_ITEM_SIZE (DIR_ITEM_NAME_SIZE + sizeof(inode_no_t))
+
+struct dir_item_s {
+    char name[DIR_ITEM_NAME_SIZE + 1];
+    block_no_t inode_no;
+};
+
+static void dir_item_load_from_bin(struct dir_item_s* item, const char* bin);
+static void dir_item_dump_to_bin(const struct dir_item_s* item, char* bin);
+
+/* -------------------- */
 
 static void dir_name(const char* path, char* dir);
 static void base_name(const char* path, char* name);
 
 bool fulfs_open(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* fs, const char* path)
 {
-    if (path[0] != '/') {
-        log_warning("fulfs_open函数不支持相对路径: %s\n", path);
-        return false;
-    }
-
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
     dir_name(path, dir_path);
@@ -31,7 +41,7 @@ bool fulfs_open(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* 
     /* 定位出目录所在的inode */
     bool exist;
     inode_no_t dir_no;
-    bool success = dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), dir_path + 1, &exist, &dir_no);
+    bool success = dir_roottree_locate(device, fs, dir_path, &exist, &dir_no);
     if (!success) {
         return false;
     }
@@ -110,11 +120,6 @@ fs_off_t fulfs_lseek(fulfs_file_t* file, fs_off_t off, int where)
 
 bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* path)
 {
-    if (path[0] != '/') {
-        log_warning("fulfs_mkdir函数不支持相对路径: %s\n", path);
-        return false;
-    }
-
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
     dir_name(path, dir_path);
@@ -123,7 +128,7 @@ bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
     /* 定位出目录所在的inode */
     bool exist;
     inode_no_t dir_no;
-    bool success = dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), dir_path + 1, &exist, &dir_no);
+    bool success = dir_roottree_locate(device, fs, dir_path, &exist, &dir_no);
     if (!success) {
         return false;
     }
@@ -147,14 +152,9 @@ bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
 
 bool fulfs_rmdir(device_handle_t device, fulfs_filesystem_t* fs, const char* path)
 {
-    if (path[0] != '/') {
-        log_warning("fulfs_rmdir函数不支持相对路径: %s\n", path);
-        return false;
-    }
-
     bool exist;
     inode_no_t dir_no;
-    bool success = dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), path + 1, &exist, &dir_no);
+    bool success = dir_roottree_locate(device, fs, path, &exist, &dir_no);
     if (!success) {
         return false;
     }
@@ -178,17 +178,10 @@ bool fulfs_rmdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
 
 bool fulfs_link(device_handle_t device, fulfs_filesystem_t* fs, const char* src_path, const char* new_path)
 {
-
-    if (src_path[0] != '/' || new_path[0] != '/') {
-        log_warning("fulfs_link函数不支持相对路径: %s, %s\n", src_path, new_path);
-        return false;
-    }
-
-
     /* src文件所在的inode */
     bool exist;
     inode_no_t no;
-    bool success = dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), src_path + 1, &exist, &no);
+    bool success = dir_roottree_locate(device, fs, src_path, &exist, &no);
     if (!success || !exist) {
         return false;
     }
@@ -221,7 +214,7 @@ bool fulfs_link(device_handle_t device, fulfs_filesystem_t* fs, const char* src_
     base_name(src_path, name);
 
     inode_no_t dir_no;
-    success = dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), dir_path + 1, &exist, &dir_no);
+    success = dir_roottree_locate(device, fs, dir_path, &exist, &dir_no);
     if (!success || !exist) {
         /* 这个要是失败了，很尴尬的事情 */
         base_file_unref(device, &fs->sb, no);
@@ -240,11 +233,6 @@ bool fulfs_link(device_handle_t device, fulfs_filesystem_t* fs, const char* src_
 
 bool fulfs_unlink(device_handle_t device, fulfs_filesystem_t* fs, const char* path)
 {
-    if (path[0] != '/') {
-        log_warning("fulfs_unlink函数不支持相对路径: %s\n", path);
-        return false;
-    }
-
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
     dir_name(path, dir_path);
@@ -252,7 +240,7 @@ bool fulfs_unlink(device_handle_t device, fulfs_filesystem_t* fs, const char* pa
 
     bool exist;
     inode_no_t dir_no;
-    bool success = dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), dir_path + 1, &exist, &dir_no);
+    bool success = dir_roottree_locate(device, fs, dir_path, &exist, &dir_no);
     if (!success || !exist) {
         return false;
     }
@@ -290,33 +278,146 @@ bool fulfs_unlink(device_handle_t device, fulfs_filesystem_t* fs, const char* pa
 
 bool fulfs_symlink(device_handle_t device, fulfs_filesystem_t* fs, const char* src_path, const char* new_path)
 {
-    if (src_path[0] != '/') {
-        log_warning("fulfs_symlink函数不支持相对路径: %s\n", src_path);
+    /* FIXME: 暂时先这样判断文件是否存在 */
+    if (!fulfs_stat(device, fs, src_path, NULL) || !fulfs_stat(device, fs, src_path, NULL)) {
+        return false;
+    }
+
+    fulfs_file_t file;
+    bool success = fulfs_open(&file, device, fs, new_path);
+    if (!success) {
         return false;
     }
 
 
-    return false;
+    int write_size = strlen(new_path) + 1;
+    int count = fulfs_write(&file, new_path, write_size);
+    if (count != write_size) {
+        return false;
+    }
+
+    fulfs_close(&file);
+
+    return true;
 }
 
 bool fulfs_readlink(device_handle_t device, fulfs_filesystem_t* fs, const char *path, char *buf, size_t size)
 {
-    /* TODO */
-    return false;
+    struct fs_stat st;
+    if (!fulfs_stat(device, fs, path, &st)) {
+        return false;
+    }
+
+    if (st.st_mode != FS_S_IFLNK) {
+        return false;
+    }
+
+    fulfs_file_t file;
+    bool success = fulfs_open(&file, device, fs, path);
+    if (!success) {
+        return false;
+    }
+
+
+    int read_size = min_int(size - 1, st.st_size);
+    int count = fulfs_read(&file, buf, read_size);
+    if (count != read_size) {
+        return false;
+    }
+    buf[size] = '\0';
+
+    fulfs_close(&file);
+
+    return true;
 }
 
 
+bool fulfs_stat(device_handle_t device, fulfs_filesystem_t* fs, const char *path, struct fs_stat *buf)
+{
+    bool exist;
+    inode_no_t no;
+    bool success = dir_roottree_locate(device, fs, path, &exist, &no);
+    if (!success || !exist) {
+        return false;
+    }
+
+    base_file_t base_file;
+    success = base_file_open(&base_file, device, &fs->sb, no);
+    if (!success) {
+        return false;
+    }
+
+    if (buf == NULL) {
+        return true;
+    }
+
+    buf->st_nlink = base_file_ref_count(&base_file);
+    buf->st_size = base_file_size(&base_file);
+    long blocks;
+    success = base_file_block_count(&base_file, &blocks);
+    if (!success) {
+        return false;
+    }
+    buf->st_blocks = blocks;
+    buf->st_atime = base_file_accessed_time(&base_file);
+    buf->st_mtime = base_file_modified_time(&base_file);
+    buf->st_ctime = base_file_created_time(&base_file);
+
+    int mode = base_file_mode(&base_file);
+    if (mode == MODE_FILE) {
+        buf->st_mode = FS_S_IFREG;
+    } else if (mode == MODE_DIR) {
+        buf->st_mode = FS_S_IFDIR;
+    } else if (mode == MODE_SYMBOL_LINK) {
+        buf->st_mode = FS_S_IFLNK;
+    } else {
+        assert(false);
+    }
+
+    return true;
+}
+
+
+bool opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path)
+{
+    bool exist;
+    inode_no_t no;
+    bool success = dir_roottree_locate(device, fs, path, &exist, &no);
+    if (!success || !exist) {
+        return false;
+    }
+
+    success = base_file_open(&dir->base_file, device, &fs->sb, no);
+    if (!success) {
+        return false;
+    }
+
+    return true;
+}
+
+bool readdir(fulfs_dir_t* dir, char* name)
+{
+    char buf[DIR_ITEM_SIZE];
+    bool success = base_file_read(&dir->base_file, buf, DIR_ITEM_SIZE);
+    if (!success) {
+        return false;
+    }
+
+    struct dir_item_s dir_item;
+    dir_item_load_from_bin(&dir_item, buf);
+
+    strcpy(name, dir_item.name);
+
+    return true;
+}
+
+bool closedir(fulfs_dir_t* dir)
+{
+
+    return base_file_close(&dir->base_file);
+}
+
 /*************************************/
-#define DIR_ITEM_NAME_SIZE 14
-#define DIR_ITEM_SIZE (DIR_ITEM_NAME_SIZE + sizeof(inode_no_t))
-
-struct dir_item_s {
-    char name[DIR_ITEM_NAME_SIZE + 1];
-    block_no_t inode_no;
-};
-
-static void dir_item_load_from_bin(struct dir_item_s* item, const char* bin);
-static void dir_item_dump_to_bin(const struct dir_item_s* item, char* bin);
 
 static bool dir_locate(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t dir, const char* name, bool* p_exist, inode_no_t* p_no)
 {
@@ -488,6 +589,13 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
     *p_exist = true;
     *p_no = start;
     return true;
+}
+
+static bool dir_roottree_locate(device_handle_t device, fulfs_filesystem_t* fs, const char* path, bool* p_exist, inode_no_t* p_no)
+{
+    assert(path[0] != '/');
+
+    return dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), path + 1, p_exist, p_no);
 }
 
 static void dir_name(const char* path, char* dir)

@@ -11,7 +11,7 @@ typedef struct {
 }fulfs_file_t;
 
 
-bool fulfs_open(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* fs, const char* path);
+fulfs_file_t* fulfs_open(device_handle_t device, fulfs_filesystem_t* fs, const char* path);
 void fulfs_close(fulfs_file_t* file);
 
 int fulfs_read(fulfs_file_t* file, char* buf, int count);
@@ -35,7 +35,7 @@ typedef struct {
     base_file_t base_file;
 }fulfs_dir_t;
 
-bool fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path);
+fulfs_dir_t* fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, const char *path);
 bool fulfs_readdir(fulfs_dir_t* dir, char* name);
 bool fulfs_closedir(fulfs_dir_t* dir);
 

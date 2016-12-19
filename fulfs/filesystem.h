@@ -23,6 +23,7 @@ typedef struct {
 }fulfs_filesystem_t;
 
 
+fulfs_filesystem_t* fulfs_filesystem_new(device_handle_t device);
 bool fulfs_filesystem_init(fulfs_filesystem_t* fs, device_handle_t device);
 
 /* 将设备device格式化 */

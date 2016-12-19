@@ -6,6 +6,7 @@
 
 #include "../utils/math.h"
 #include "../utils/log.h"
+#include "../memory/alloc.h"
 
 
 fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
@@ -64,4 +65,18 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
 bool fulfs_filesystem_init(fulfs_filesystem_t* fs, device_handle_t device)
 {
     return superblock_load(device, &fs->sb);
+}
+
+fulfs_filesystem_t* fulfs_filesystem_new(device_handle_t device)
+{
+    fulfs_filesystem_t* fs_ctrl = FT_NEW(fulfs_filesystem_t, 1);
+    if (fs_ctrl == NULL) {
+        return false;
+    }
+
+    if (!fulfs_filesystem_init(fs_ctrl, device)) {
+        return false;
+    }
+
+    return fs_ctrl;
 }

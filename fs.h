@@ -10,7 +10,8 @@ void fs_init(void);
 /* 将文件系统挂载到某盘符上 */
 enum {
     FS_TYPE_FULFS,
-    FS_TYPE_TOTAL
+    FS_TYPE_TOTAL,
+    FS_TYPE_NULL
 };
 
 bool fs_mount(device_handle_t device, char drive_letter, int fs_type);
@@ -41,10 +42,11 @@ int fs_readlink(const char *path, char *buf, size_t size);
 int fs_stat(const char *path, struct fs_stat *buf);
 
 
+#define FS_DIR fs_dir_t
 
-int fs_opendir(fs_dir_t* dir, const char *path);
-int fs_readdir(fs_dir_t* dir, char* name);
-void fs_closedir(fs_dir_t* dir);
+FS_DIR* fs_opendir(const char *path);
+int fs_readdir(FS_DIR* dir, char* name);
+void fs_closedir(FS_DIR* dir);
 
 
 

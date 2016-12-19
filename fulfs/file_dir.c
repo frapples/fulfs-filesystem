@@ -3,6 +3,7 @@
 #include "base_file.h"
 #include "../utils/math.h"
 #include "../utils/log.h"
+#include "../memory/alloc.h"
 #include <string.h>
 #include <assert.h>
 
@@ -31,7 +32,18 @@ static void dir_item_dump_to_bin(const struct dir_item_s* item, char* bin);
 static void dir_name(const char* path, char* dir);
 static void base_name(const char* path, char* name);
 
-bool fulfs_open(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* fs, const char* path)
+static bool fulfs_file_init(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* fs, const char* path);
+
+fulfs_file_t* fulfs_open(device_handle_t device, fulfs_filesystem_t* fs, const char* path)
+{
+    fulfs_file_t* file = FT_NEW(fulfs_file_t, 1);
+    if (!fulfs_file_init(file, device, fs, path)) {
+        return NULL;
+    }
+    return file;
+}
+
+static bool fulfs_file_init(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* fs, const char* path)
 {
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
@@ -79,6 +91,7 @@ bool fulfs_open(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* 
 void fulfs_close(fulfs_file_t* file)
 {
     base_file_close(&file->base_file);
+    ft_free(file);
 }
 
 int fulfs_read(fulfs_file_t* file, char* buf, int count)
@@ -284,20 +297,19 @@ bool fulfs_symlink(device_handle_t device, fulfs_filesystem_t* fs, const char* s
         return false;
     }
 
-    fulfs_file_t file;
-    bool success = fulfs_open(&file, device, fs, new_path);
-    if (!success) {
+    fulfs_file_t* file = fulfs_open(device, fs, new_path);
+    if (file == NULL) {
         return false;
     }
 
 
     int write_size = strlen(new_path) + 1;
-    int count = fulfs_write(&file, new_path, write_size);
+    int count = fulfs_write(file, new_path, write_size);
     if (count != write_size) {
         return false;
     }
 
-    fulfs_close(&file);
+    fulfs_close(file);
 
     return true;
 }
@@ -313,21 +325,20 @@ bool fulfs_readlink(device_handle_t device, fulfs_filesystem_t* fs, const char *
         return false;
     }
 
-    fulfs_file_t file;
-    bool success = fulfs_open(&file, device, fs, path);
-    if (!success) {
+    fulfs_file_t* file = fulfs_open(device, fs, path);
+    if (file == NULL) {
         return false;
     }
 
 
     int read_size = min_int(size - 1, st.st_size);
-    int count = fulfs_read(&file, buf, read_size);
+    int count = fulfs_read(file, buf, read_size);
     if (count != read_size) {
         return false;
     }
     buf[size] = '\0';
 
-    fulfs_close(&file);
+    fulfs_close(file);
 
     return true;
 }
@@ -379,21 +390,23 @@ bool fulfs_stat(device_handle_t device, fulfs_filesystem_t* fs, const char *path
 }
 
 
-bool fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path)
+fulfs_dir_t* fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, const char *path)
 {
+    fulfs_dir_t* dir = FT_NEW(fulfs_dir_t, 1);
+
     bool exist;
     inode_no_t no;
     bool success = dir_roottree_locate(device, fs, path, &exist, &no);
     if (!success || !exist) {
-        return false;
+        return NULL;
     }
 
     success = base_file_open(&dir->base_file, device, &fs->sb, no);
     if (!success) {
-        return false;
+        return NULL;
     }
 
-    return true;
+    return dir;
 }
 
 bool fulfs_readdir(fulfs_dir_t* dir, char* name)
@@ -414,8 +427,9 @@ bool fulfs_readdir(fulfs_dir_t* dir, char* name)
 
 bool fulfs_closedir(fulfs_dir_t* dir)
 {
-
-    return base_file_close(&dir->base_file);
+    bool success = base_file_close(&dir->base_file);
+    ft_free(dir);
+    return success;
 }
 
 /*************************************/

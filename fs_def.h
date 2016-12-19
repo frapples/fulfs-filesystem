@@ -40,10 +40,13 @@ struct fs_stat {
 
 /** 实现的某种特定的文件系统必须要先实现以下的接口 */
 typedef void fs_filesystem_t;
+
+typedef fs_filesystem_t* (fs_filesystem_new_f)(device_handle_t device);
+
 typedef void fs_file_t;
 typedef void fs_dir_t;
 
-typedef bool     (fs_open_f)(fs_file_t* file, device_handle_t device, fs_filesystem_t* fs, const char* path);
+typedef fs_file_t* (fs_open_f)(device_handle_t device, fs_filesystem_t* fs, const char* path);
 typedef void     (fs_close_f)(fs_file_t* file);
 
 typedef int      (fs_read_f)(fs_file_t* file, char* buf, int count);
@@ -63,7 +66,7 @@ typedef bool (fs_readlink_f)(device_handle_t device, fs_filesystem_t* fs, const 
 
 typedef bool (fs_stat_f)(device_handle_t device, fs_filesystem_t* fs, const char *path, struct fs_stat *buf);
 
-typedef bool (fs_opendir_f)(device_handle_t device, fs_filesystem_t* fs, fs_dir_t* dir, const char *path);
+typedef fs_dir_t* (fs_opendir_f)(device_handle_t device, fs_filesystem_t* fs, const char *path);
 typedef bool (fs_readdir_f)(fs_dir_t* dir, char* name);
 typedef bool (fs_closedir_f)(fs_dir_t* dir);
 
@@ -71,6 +74,8 @@ typedef bool (fs_closedir_f)(fs_dir_t* dir);
 /* 类似虚表的一个东西 */
 
 struct fs_operate_functions_s{
+    fs_filesystem_new_f* filesystem_new;
+
     fs_open_f* open;
     fs_close_f* close;
     fs_read_f* read;
@@ -89,27 +94,29 @@ struct fs_operate_functions_s{
     fs_opendir_f* opendir;
     fs_readdir_f* readdir;
     fs_closedir_f* closedir;
+
 };
 
-#define FS_OPERATE_FUNCTIONS_SET(var, type_name)                  \
-    do {                                                          \
-        (var).open = (fs_open_f*)type_name##_open;                \
-        (var).close = (fs_close_f*)type_name##_close;             \
-        (var).read = (fs_read_f*)type_name##_read;                \
-        (var).write = (fs_write_f*)type_name##_write;             \
-        (var).ftruncate = (fs_ftruncate_f*)type_name##_ftruncate; \
-        (var).lseek = (fs_lseek_f*)type_name##_lseek;             \
-        (var).mkdir = (fs_mkdir_f*)type_name##_mkdir;             \
-        (var).rmdir = (fs_rmdir_f*)type_name##_rmdir;             \
-        (var).link = (fs_link_f*)type_name##_link;                \
-        (var).unlink = (fs_unlink_f*)type_name##_unlink;          \
-        (var).symlink = (fs_symlink_f*)type_name##_symlink;       \
-        (var).readlink = (fs_readlink_f*)type_name##_readlink;    \
-        (var).stat = (fs_stat_f*)type_name##_stat;                \
-        (var).opendir = (fs_opendir_f*)type_name##_opendir;       \
-        (var).readdir = (fs_readdir_f*)type_name##_readdir;       \
-        (var).closedir = (fs_closedir_f*)type_name##_closedir;    \
-                                                                  \
-    } while(0);                                                   \
+#define FS_OPERATE_FUNCTIONS_SET(var, type_name)                        \
+    do {                                                                \
+        (var).open = (fs_open_f*)type_name##_open;                      \
+        (var).close = (fs_close_f*)type_name##_close;                   \
+        (var).read = (fs_read_f*)type_name##_read;                      \
+        (var).write = (fs_write_f*)type_name##_write;                   \
+        (var).ftruncate = (fs_ftruncate_f*)type_name##_ftruncate;       \
+        (var).lseek = (fs_lseek_f*)type_name##_lseek;                   \
+        (var).mkdir = (fs_mkdir_f*)type_name##_mkdir;                   \
+        (var).rmdir = (fs_rmdir_f*)type_name##_rmdir;                   \
+        (var).link = (fs_link_f*)type_name##_link;                      \
+        (var).unlink = (fs_unlink_f*)type_name##_unlink;                \
+        (var).symlink = (fs_symlink_f*)type_name##_symlink;             \
+        (var).readlink = (fs_readlink_f*)type_name##_readlink;          \
+        (var).stat = (fs_stat_f*)type_name##_stat;                      \
+        (var).opendir = (fs_opendir_f*)type_name##_opendir;             \
+        (var).readdir = (fs_readdir_f*)type_name##_readdir;             \
+        (var).closedir = (fs_closedir_f*)type_name##_closedir;          \
+        (var).filesystem_new = (fs_filesystem_new_f*)type_name##_filesystem_new; \
+                                                                        \
+    } while(0);                                                         \
 
 #endif /* __FS__DEF__H__ */

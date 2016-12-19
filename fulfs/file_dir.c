@@ -91,7 +91,8 @@ int fulfs_write(fulfs_file_t* file, const char* buf, int count)
     return base_file_write(&file->base_file, buf, count);
 }
 
-bool fulfs_ftruncate(fulfs_file_t* file, fsize_t size)
+
+bool fulfs_ftruncate(fulfs_file_t* file, fs_off_t size)
 {
     return base_file_truncate(&file->base_file, size);
 }
@@ -378,7 +379,7 @@ bool fulfs_stat(device_handle_t device, fulfs_filesystem_t* fs, const char *path
 }
 
 
-bool opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path)
+bool fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path)
 {
     bool exist;
     inode_no_t no;
@@ -395,7 +396,7 @@ bool opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, c
     return true;
 }
 
-bool readdir(fulfs_dir_t* dir, char* name)
+bool fulfs_readdir(fulfs_dir_t* dir, char* name)
 {
     char buf[DIR_ITEM_SIZE];
     bool success = base_file_read(&dir->base_file, buf, DIR_ITEM_SIZE);
@@ -411,7 +412,7 @@ bool readdir(fulfs_dir_t* dir, char* name)
     return true;
 }
 
-bool closedir(fulfs_dir_t* dir)
+bool fulfs_closedir(fulfs_dir_t* dir)
 {
 
     return base_file_close(&dir->base_file);

@@ -1,8 +1,11 @@
 #ifndef __FS__DEF__H__
 #define __FS__DEF__H__
 
-#include "stdint.h"
-#include "time.h"
+#include "device_io.h"
+
+#include <time.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 /* 这里面定义的函数接口，所有的文件系统应该要遵循此接口 */
 
@@ -33,5 +36,80 @@ struct fs_stat {
     time_t        st_ctime;     //最后一次改变时间(指属性)
 };
 
+
+
+/** 实现的某种特定的文件系统必须要先实现以下的接口 */
+typedef void fs_filesystem_t;
+typedef void fs_file_t;
+typedef void fs_dir_t;
+
+typedef bool     (fs_open_f)(fs_file_t* file, device_handle_t device, fs_filesystem_t* fs, const char* path);
+typedef void     (fs_close_f)(fs_file_t* file);
+
+typedef int      (fs_read_f)(fs_file_t* file, char* buf, int count);
+
+typedef int      (fs_write_f)(fs_file_t* file, const char* buf, int count);
+typedef bool     (fs_ftruncate_f)(fs_file_t* file, fs_off_t size);
+typedef fs_off_t (fs_lseek_f)(fs_file_t* file, fs_off_t off, int where);
+
+typedef bool (fs_mkdir_f)(device_handle_t device, fs_filesystem_t* fs, const char* path);
+typedef bool (fs_rmdir_f)(device_handle_t device, fs_filesystem_t* fs, const char* path);
+
+typedef bool (fs_link_f)(device_handle_t device, fs_filesystem_t* fs, const char* src_path, const char* new_path);
+typedef bool (fs_unlink_f)(device_handle_t device, fs_filesystem_t* fs, const char* path);
+
+typedef bool (fs_symlink_f)(device_handle_t device, fs_filesystem_t* fs, const char* src_path, const char* new_path);
+typedef bool (fs_readlink_f)(device_handle_t device, fs_filesystem_t* fs, const char *path, char *buf, size_t size);
+
+typedef bool (fs_stat_f)(device_handle_t device, fs_filesystem_t* fs, const char *path, struct fs_stat *buf);
+
+typedef bool (fs_opendir_f)(device_handle_t device, fs_filesystem_t* fs, fs_dir_t* dir, const char *path);
+typedef bool (fs_readdir_f)(fs_dir_t* dir, char* name);
+typedef bool (fs_closedir_f)(fs_dir_t* dir);
+
+
+/* 类似虚表的一个东西 */
+
+struct fs_operate_functions_s{
+    fs_open_f* open;
+    fs_close_f* close;
+    fs_read_f* read;
+    fs_write_f* write;
+    fs_ftruncate_f* ftruncate;
+    fs_lseek_f* lseek;
+    fs_mkdir_f* mkdir;
+    fs_rmdir_f* rmdir;
+
+    fs_link_f* link;
+    fs_unlink_f* unlink;
+
+    fs_symlink_f* symlink;
+    fs_readlink_f* readlink;
+    fs_stat_f* stat;
+    fs_opendir_f* opendir;
+    fs_readdir_f* readdir;
+    fs_closedir_f* closedir;
+};
+
+#define FS_OPERATE_FUNCTIONS_SET(var, type_name)                  \
+    do {                                                          \
+        (var).open = (fs_open_f*)type_name##_open;                \
+        (var).close = (fs_close_f*)type_name##_close;             \
+        (var).read = (fs_read_f*)type_name##_read;                \
+        (var).write = (fs_write_f*)type_name##_write;             \
+        (var).ftruncate = (fs_ftruncate_f*)type_name##_ftruncate; \
+        (var).lseek = (fs_lseek_f*)type_name##_lseek;             \
+        (var).mkdir = (fs_mkdir_f*)type_name##_mkdir;             \
+        (var).rmdir = (fs_rmdir_f*)type_name##_rmdir;             \
+        (var).link = (fs_link_f*)type_name##_link;                \
+        (var).unlink = (fs_unlink_f*)type_name##_unlink;          \
+        (var).symlink = (fs_symlink_f*)type_name##_symlink;       \
+        (var).readlink = (fs_readlink_f*)type_name##_readlink;    \
+        (var).stat = (fs_stat_f*)type_name##_stat;                \
+        (var).opendir = (fs_opendir_f*)type_name##_opendir;       \
+        (var).readdir = (fs_readdir_f*)type_name##_readdir;       \
+        (var).closedir = (fs_closedir_f*)type_name##_closedir;    \
+                                                                  \
+    } while(0);                                                   \
 
 #endif /* __FS__DEF__H__ */

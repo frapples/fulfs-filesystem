@@ -16,7 +16,7 @@ void fulfs_close(fulfs_file_t* file);
 
 int fulfs_read(fulfs_file_t* file, char* buf, int count);
 int fulfs_write(fulfs_file_t* file, const char* buf, int count);
-bool fulfs_ftruncate(fulfs_file_t* file, fsize_t size);
+bool fulfs_ftruncate(fulfs_file_t* file, fs_off_t size);
 fs_off_t fulfs_lseek(fulfs_file_t* file, fs_off_t off, int where);
 
 bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* path);
@@ -35,8 +35,8 @@ typedef struct {
     base_file_t base_file;
 }fulfs_dir_t;
 
-bool opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path);
-bool readdir(fulfs_dir_t* dir, char* name);
-bool closedir(fulfs_dir_t* dir);
+bool fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, fulfs_dir_t* dir, const char *path);
+bool fulfs_readdir(fulfs_dir_t* dir, char* name);
+bool fulfs_closedir(fulfs_dir_t* dir);
 
 #endif /* __FULFS__FILE_DIR__H__ */

@@ -41,8 +41,8 @@ int fs_readlink(const char *path, char *buf, size_t size);
 
 int fs_stat(const char *path, struct fs_stat *buf);
 
-
-#define FS_DIR fs_dir_t
+struct _fs_dir_wrapper_s;
+typedef struct _fs_dir_wrapper_s FS_DIR;
 
 FS_DIR* fs_opendir(const char *path);
 int fs_readdir(FS_DIR* dir, char* name);

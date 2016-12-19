@@ -2,6 +2,7 @@
 
 #include "fs_def.h"
 #include "fulfs/fulfs.h"
+#include "memory/alloc.h"
 #include <ctype.h>
 
 
@@ -92,7 +93,10 @@ static inline struct dev_fsctrl_s* path_to_ctrl(const char* path) {
 #define FS_MAX_FILE_FD 2 >> 16
 
 /* FIXME:似乎C语言全局数组默认就是NULL? 记不清楚了 */
-fs_file_t* g_fs_files[FS_MAX_FILE_FD];
+struct {
+    fs_file_t* file;
+    char drive_letter;
+} g_fs_files[FS_MAX_FILE_FD];
 
 int fs_open(const char* path)
 {
@@ -101,7 +105,7 @@ int fs_open(const char* path)
     }
 
     for (int fd = 0; fd < FS_MAX_FILE_FD; fd++) {
-        if (g_fs_files[fd] == NULL) {
+        if (g_fs_files[fd].file == NULL) {
             struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
 
             fs_file_t* file = ctrl->opfuncs->open(ctrl->device, ctrl->fs_ctrl, path_remain(path));
@@ -109,7 +113,8 @@ int fs_open(const char* path)
                 return FS_ERROR;
             }
 
-            g_fs_files[fd] = file;
+            g_fs_files[fd].file = file;
+            g_fs_files[fd].drive_letter = path_drive_letter(path);
         }
     }
     return FS_ERROR;
@@ -117,73 +122,201 @@ int fs_open(const char* path)
 
 void fs_close(int fd)
 {
+    if (fd < FS_MAX_FILE_FD && g_fs_files[fd].file != NULL) {
+        struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(g_fs_files[fd].drive_letter);
+        ctrl->opfuncs->close(g_fs_files[fd].file);
+    }
 
 }
 
 int fs_read(int fd, char* buf, int count)
 {
-    
-    return FS_ERROR;
+    if (fd < FS_MAX_FILE_FD && g_fs_files[fd].file != NULL) {
+    struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(g_fs_files[fd].drive_letter);
+    return ctrl->opfuncs->read(g_fs_files[fd].file, buf, count);
+    } else {
+        return FS_ERROR;
+    }
 }
 int fs_write(int fd, const char* buf, int count)
 {
-    
-    return FS_ERROR;
+    if (fd < FS_MAX_FILE_FD && g_fs_files[fd].file != NULL) {
+        struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(g_fs_files[fd].drive_letter);
+        return ctrl->opfuncs->write(g_fs_files[fd].file, buf, count);
+    } else {
+        return FS_ERROR;
+    }
 }
+
 bool fs_ftruncate(int fd, fs_off_t size)
 {
-    return FS_ERROR;
-    
+    if (fd < FS_MAX_FILE_FD && g_fs_files[fd].file != NULL) {
+        struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(g_fs_files[fd].drive_letter);
+        return ctrl->opfuncs->ftruncate(g_fs_files[fd].file, size);
+    } else {
+        return FS_ERROR;
+    }
 }
+
 fs_off_t fs_lseek(int fd, fs_off_t off, int where)
 {
-    
-    return FS_ERROR;
+    if (fd < FS_MAX_FILE_FD && g_fs_files[fd].file != NULL) {
+        struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(g_fs_files[fd].drive_letter);
+        return ctrl->opfuncs->lseek(g_fs_files[fd].file, off, where);
+    } else {
+        return FS_ERROR;
+    }
 }
+
 
 int fs_mkdir(const char* path)
 {
-    return FS_ERROR;
-    
+    if (!path_check(path)) {
+        return FS_ERROR;
+    }
+
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+    if (ctrl->opfuncs->mkdir(ctrl->device, ctrl->fs_ctrl, path)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
 }
+
 int fs_rmdir(const char* path)
 {
-    return FS_ERROR;
+    if (!path_check(path)) {
+        return FS_ERROR;
+    }
+
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+    if (ctrl->opfuncs->rmdir(ctrl->device, ctrl->fs_ctrl, path)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
 }
 
 int fs_link(const char* src_path, const char* new_path)
 {
-    return FS_ERROR;
+    if (!path_check(src_path) || !path_check(new_path)) {
+        return FS_ERROR;
+    }
+
+    if ((path_drive_letter(src_path)) != path_drive_letter(new_path)) {
+        return FS_ERROR;
+    }
+
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(src_path);
+    if (ctrl->opfuncs->link(ctrl->device, ctrl->fs_ctrl, src_path, new_path)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
 }
 int fs_unlink(const char* path)
 {
-    return FS_ERROR;
+    if (!path_check(path)) {
+        return FS_ERROR;
+    }
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+    if (ctrl->opfuncs->unlink(ctrl->device, ctrl->fs_ctrl, path)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
 }
 
 int fs_symlink(const char* src_path, const char* new_path)
 {
-    return FS_ERROR;
+    if (!path_check(src_path) || !path_check(new_path)) {
+        return FS_ERROR;
+    }
+
+    if ((path_drive_letter(src_path)) != path_drive_letter(new_path)) {
+        return FS_ERROR;
+    }
+
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(src_path);
+    if (ctrl->opfuncs->symlink(ctrl->device, ctrl->fs_ctrl, src_path, new_path)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
 }
 int fs_readlink(const char *path, char *buf, size_t size)
 {
+    if (!path_check(path)) {
+        return FS_ERROR;
+    }
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+    if (ctrl->opfuncs->readlink(ctrl->device, ctrl->fs_ctrl, path, buf, size)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
     return FS_ERROR;
 }
+
 
 int fs_stat(const char *path, struct fs_stat *buf)
 {
-    return FS_ERROR;
+    if (!path_check(path)) {
+        return FS_ERROR;
+    }
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+    if (ctrl->opfuncs->stat(ctrl->device, ctrl->fs_ctrl, path, buf)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
 }
 
 
+struct _fs_dir_wrapper_s
+{
+    fs_dir_t* dir;
+    char drive_letter;
+};
 
 FS_DIR* fs_opendir(const char *path)
 {
-    return NULL;
+    if (!path_check(path)) {
+        return NULL;
+    }
+
+
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+    fs_dir_t* dir = ctrl->opfuncs->opendir(ctrl->device, ctrl->fs_ctrl, path);
+    if (dir == NULL) {
+        return NULL;
+    }
+
+    FS_DIR* dir_wrapper = FT_NEW(FS_DIR, 1);
+    dir_wrapper->dir = dir;
+    dir_wrapper->drive_letter = path_drive_letter(path);
+    return dir_wrapper;
 }
+
 int fs_readdir(FS_DIR* dir, char* name)
 {
-    return FS_ERROR;
+    if (dir != NULL) {
+        struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(dir->drive_letter);
+        if (ctrl->opfuncs->readdir(dir->dir, name)) {
+            return FS_SUCCESS;
+        } else {
+            return FS_ERROR;
+        }
+    } else {
+        return FS_ERROR;
+    }
 }
+
 void fs_closedir(FS_DIR* dir)
 {
+    if (dir != NULL) {
+        struct dev_fsctrl_s* ctrl = drive_letter_to_ctrl(dir->drive_letter);
+        ctrl->opfuncs->closedir(dir->dir);
+        ft_free(dir);
+    }
 }

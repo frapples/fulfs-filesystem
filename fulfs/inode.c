@@ -55,11 +55,15 @@ bool inode_dump(dev_inode_ctrl_t * dev_inode_ctrl, inode_no_t no, inode_t* inode
     size_t offset;
     inode_no_to_block_no_and_offset(dev_inode_ctrl, no, &block_no, &offset);
 
-
     char buf[MAX_BYTES_PER_BLOCK] = {'\0'};
+    bool sucess = block_read(dev_inode_ctrl->device, dev_inode_ctrl->block_size / BYTES_PER_SECTOR, block_no, buf);
+    if (!sucess) {
+        return false;
+    }
+
     *((inode_t*)(buf + offset)) = *inode;
 
-    bool sucess = block_write(dev_inode_ctrl->device, dev_inode_ctrl->block_size / BYTES_PER_SECTOR, block_no, buf);
+    sucess = block_write(dev_inode_ctrl->device, dev_inode_ctrl->block_size / BYTES_PER_SECTOR, block_no, buf);
     if (!sucess) {
         log_debug("inode写入错误，block写入失败: %d", (int)block_no);
         return false;

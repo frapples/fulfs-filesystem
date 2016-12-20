@@ -447,6 +447,7 @@ static bool dir_locate(device_handle_t device, fulfs_filesystem_t* fs, inode_no_
         return false;
     }
 
+    assert(base_file_mode(&base_file) == MODE_DIR);
     assert(base_file_size(&base_file) % DIR_ITEM_SIZE == 0);
 
     char buf[DIR_ITEM_SIZE];
@@ -482,6 +483,8 @@ static bool dir_add(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t d
         return false;
     }
 
+    assert(base_file_mode(&base_file) == MODE_DIR);
+
     assert(base_file_size(&base_file) % DIR_ITEM_SIZE == 0);
 
     char buf[DIR_ITEM_SIZE];
@@ -512,6 +515,7 @@ static bool dir_del(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t d
         return false;
     }
 
+    assert(base_file_mode(&base_file) == MODE_DIR);
     assert(base_file_size(&base_file) % DIR_ITEM_SIZE == 0);
 
     char buf[DIR_ITEM_SIZE];

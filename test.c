@@ -51,6 +51,34 @@ bool test_device_io(void)
     return true;
 }
 
+bool test_inode_io(void)
+{
+    const char* path = "device_io_test.bin";
+    int device = device_add(path);
+
+    dev_inode_ctrl_t dev_inode_ctrl;
+    dev_inode_ctrl_init(&dev_inode_ctrl, device, 4 * 1024, 1, 2048);
+
+    /* 顺着写 倒着读 */
+    inode_t inode[1000];
+    inode_t inode2[1000];
+    for (inode_no_t i = 0; i < 1000; i++) {
+        bytearray_rand((char *)&inode[i], sizeof(inode_t));
+        TEST_ASSERT(inode_dump(&dev_inode_ctrl, i, &inode[i]));
+    }
+
+    for (int i = 1000 - 1; i >= 0; i--) {
+        TEST_ASSERT(inode_load(&dev_inode_ctrl, i, &inode2[i]));
+    }
+
+    for (inode_no_t i = 0; i < 1000; i++) {
+        TEST_ASSERT(bytearray_equal((char *)&inode[i], (char *)&inode2[i], sizeof(inode_t)));
+    }
+
+    device_del(device);
+    return true;
+}
+
 bool test_format(void)
 {
     const char* path = "device_io_test.bin";
@@ -83,6 +111,11 @@ bool test_format(void)
         TEST_ASSERT(inode_load(&dev_inode_ctrl, i, &inode));
         TEST_ASSERT(inode.mode == 0);
     }
+
+
+    base_file_t base_file;
+    TEST_ASSERT(base_file_open(&base_file, device, &sb, 0));
+    TEST_ASSERT(base_file_mode(&base_file) == MODE_DIR);
 
     device_del(device);
     return true;
@@ -129,6 +162,7 @@ bool test_base_file(void)
 
     inode_no_t inode_no;
     TEST_ASSERT(base_file_create(device, &sb, MODE_FILE, &inode_no));
+    TEST_ASSERT(inode_no > 0);
 
     base_file_t base_file;
     TEST_ASSERT(base_file_open(&base_file, device, &sb, inode_no));
@@ -151,8 +185,12 @@ bool test_base_file(void)
     res = base_file_read(&base_file, buf, size);
     TEST_ASSERT(res == size);
     TEST_ASSERT(bytearray_equal(buf, rand_buf, size));
-    device_del(device);
 
+
+    TEST_ASSERT(base_file_open(&base_file, device, &sb, 0));
+    TEST_ASSERT(base_file_mode(&base_file) == MODE_DIR);
+
+    device_del(device);
     return true;
 }
 
@@ -199,9 +237,10 @@ int main(int argc, char *argv[])
 
     TestFunc funcs[] = {
         test_device_io,
+        test_inode_io,
         test_format,
         /* test_base_block_file, */
-        /* test_base_file, */
+        test_base_file,
         test_fs,
     };
     return test_main(funcs, sizeof(funcs) / sizeof(*funcs));

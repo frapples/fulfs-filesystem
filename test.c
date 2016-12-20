@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
         test_inode_io,
         test_format,
         /* test_base_block_file, */
-        test_base_file,
+        /* test_base_file, */
         test_fs,
     };
     return test_main(funcs, sizeof(funcs) / sizeof(*funcs));

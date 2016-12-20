@@ -120,7 +120,7 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
     while (writed_count < count) {
 
         block_no_t current_block;
-        if (base_file_tell(base_file) == base_file_size(base_file)) {
+        if (base_file->current.current_block_relative >= count_groups(base_file_size(base_file), sectors_per_block * BYTES_PER_SECTOR)) {
             bool success = base_block_file_push_block(base_file->device, base_file->sb, &base_file->inode, &current_block);
             if (!success) {
                 log_debug("分配新block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->device,

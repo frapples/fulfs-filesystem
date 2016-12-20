@@ -9,6 +9,7 @@
 #include "memory/alloc.h"
 #include "device_io.h"
 #include "utils/sys.h"
+#include "shell.h"
 
 #define ERROR -1
 
@@ -119,7 +120,46 @@ int format(const char* path, const char* type, int block_size)
 
 int enter(void)
 {
+    const char* config_file = "config.txt";
+
+    FILE* fp = fopen(config_file, "rb");
+    if (fp == NULL) {
+        printf("打开配置文件失败！可能是没有配置文件？\n");
+        return ERROR;
+    }
+
+    /* 挂载设备 */
+    while (true) {
+        char drive_letter;
+        char path[FS_MAX_FILE_PATH];
+        int ret = fscanf(fp, "%c%s", &drive_letter, path);
+        if (ret == EOF) {
+            break;
+        }
+
+        if (ret != 2) {
+            printf("解析配置文件%s错误！\n", config_file);
+            fclose(fp);
+            return ERROR;
+        }
+
+        int device = device_add(path);
+        if (!DEVICE_IO_SUCCESS(device)) {
+            printf("挂载失败：盘号%c 容器文件%s\n", drive_letter, path);
+            continue;
+        }
+
+        if (!fs_mount(device, drive_letter, FS_TYPE_FULFS)) {
+            printf("挂载失败：盘号%c 容器文件%s\n", drive_letter, path);
+            continue;
+        }
+
+        printf("挂载成功：盘号%c 容器文件%s\n", drive_letter, path);
+    }
+    fclose(fp);
+
+
+
     printf("******** 欢迎使用本文件系统shell！ ********\n");
-    /* TODO */
-    return 0;
+    return shell_main();
 }

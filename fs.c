@@ -322,3 +322,16 @@ void fs_closedir(FS_DIR* dir)
         ft_free(dir);
     }
 }
+
+int fs_format(device_handle_t device, int sectors_per_block, int fs_type)
+{
+    if (!(0 <= fs_type && fs_type < FS_TYPE_TOTAL)) {
+        return FS_ERROR;
+    }
+
+    if (g_operate_functions[fs_type].format(device, sectors_per_block)) {
+        return FS_SUCCESS;
+    } else {
+        return FS_ERROR;
+    }
+}

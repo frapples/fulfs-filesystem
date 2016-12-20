@@ -48,6 +48,8 @@ FS_DIR* fs_opendir(const char *path);
 int fs_readdir(FS_DIR* dir, char* name);
 void fs_closedir(FS_DIR* dir);
 
+/* 文件系统操作 */
+int fs_format(device_handle_t device, int sectors_per_block, int fs_type);
 
 
 

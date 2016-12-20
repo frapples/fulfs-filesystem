@@ -89,8 +89,7 @@ bool test_format(void)
     }
 
     int device = device_add(path);
-    fulfs_errcode_t errcode = fulfs_format(device, 4 * 1024 / 512);
-    TEST_ASSERT(errcode == FULFS_SUCCESS);
+    TEST_ASSERT(fulfs_format(device, 4 * 1024 / 512));
 
     superblock_t sb;
     TEST_ASSERT(superblock_load(device, &sb));

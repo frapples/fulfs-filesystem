@@ -70,6 +70,8 @@ typedef fs_dir_t* (fs_opendir_f)(device_handle_t device, fs_filesystem_t* fs, co
 typedef bool (fs_readdir_f)(fs_dir_t* dir, char* name);
 typedef bool (fs_closedir_f)(fs_dir_t* dir);
 
+/* 文件系统本身操作 */
+typedef bool (fs_format_f)(device_handle_t device, int sectors_per_block);
 
 /* 类似虚表的一个东西 */
 
@@ -95,6 +97,7 @@ struct fs_operate_functions_s{
     fs_readdir_f* readdir;
     fs_closedir_f* closedir;
 
+    fs_format_f* format;
 };
 
 #define FS_OPERATE_FUNCTIONS_SET(var, type_name)                        \
@@ -116,6 +119,7 @@ struct fs_operate_functions_s{
         (var).readdir = (fs_readdir_f*)type_name##_readdir;             \
         (var).closedir = (fs_closedir_f*)type_name##_closedir;          \
         (var).filesystem_new = (fs_filesystem_new_f*)type_name##_filesystem_new; \
+        (var).format = (fs_format_f*)type_name##_format;                 \
                                                                         \
     } while(0);                                                         \
 

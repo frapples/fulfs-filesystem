@@ -12,6 +12,7 @@
 #include "fulfs/inode.h"
 #include "fulfs/base_file.h"
 #include "fulfs/base_block_file.h"
+#include "fs.h"
 #include "utils/log.h"
 
 #include <assert.h>
@@ -146,9 +147,35 @@ bool test_base_file(void)
     res = base_file_read(&base_file, buf, size);
     TEST_ASSERT(res == size);
     TEST_ASSERT(bytearray_equal(buf, rand_buf, size));
+    device_del(device);
 
     return true;
 }
+
+
+bool test_fs(void)
+{
+    fs_init();
+
+    const char* path = "device_io_test.bin";
+    int device = device_add(path);
+
+    TEST_ASSERT(fs_mount(device, 'A', FS_TYPE_FULFS));
+
+    int fd = fs_open("A:/text.txt");
+    TEST_ASSERT(fd != FS_ERROR);
+    fs_close(fd);
+
+    FS_DIR* dir = fs_opendir("A:/");
+    char name[30];
+    fs_readdir(dir, name);
+    printf("%s\n", name);
+    fs_closedir(dir);
+
+
+    return true;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -157,8 +184,9 @@ int main(int argc, char *argv[])
     TestFunc funcs[] = {
         test_device_io,
         test_format,
-        test_base_block_file,
-        test_base_file
+        /* test_base_block_file, */
+        /* test_base_file, */
+        test_fs,
     };
     return test_main(funcs, sizeof(funcs) / sizeof(*funcs));
 }

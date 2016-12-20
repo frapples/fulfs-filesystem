@@ -54,11 +54,17 @@ static bool fulfs_file_init(fulfs_file_t* file, device_handle_t device, fulfs_fi
     bool exist;
     inode_no_t dir_no;
     bool success = dir_roottree_locate(device, fs, dir_path, &exist, &dir_no);
-    if (!success) {
+    if (!success || !exist) {
         return false;
     }
 
     inode_no_t file_no;
+    success = dir_locate(device, fs, dir_no, name, &exist, &file_no);
+    if (!success) {
+        return false;
+    }
+
+    /* 不存在就建立新文件 */
     if (!exist) {
         bool success = base_file_create(device, &fs->sb, MODE_FILE, &file_no);
         if (!success) {
@@ -70,14 +76,6 @@ static bool fulfs_file_init(fulfs_file_t* file, device_handle_t device, fulfs_fi
         if (!success) {
             return false;
         }
-    } else {
-        bool exist;
-        bool success = dir_locate(device, fs, dir_no, name, &exist, &file_no);
-        if (!success) {
-            return false;
-        }
-
-        assert(exist);
     }
 
     success = base_file_open(&file->base_file, device, &fs->sb, file_no);
@@ -412,8 +410,8 @@ fulfs_dir_t* fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, const
 bool fulfs_readdir(fulfs_dir_t* dir, char* name)
 {
     char buf[DIR_ITEM_SIZE];
-    bool success = base_file_read(&dir->base_file, buf, DIR_ITEM_SIZE);
-    if (!success) {
+    int count = base_file_read(&dir->base_file, buf, DIR_ITEM_SIZE);
+    if (count != DIR_ITEM_SIZE) {
         return false;
     }
 
@@ -469,6 +467,8 @@ static bool dir_locate(device_handle_t device, fulfs_filesystem_t* fs, inode_no_
 
 static bool dir_add(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t dir, const char* name, inode_no_t no)
 {
+    assert(strlen(name) > 0);
+
     base_file_t base_file;
     bool success = base_file_open(&base_file, device, &fs->sb, dir);
     if (!success) {
@@ -608,7 +608,7 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
 
 static bool dir_roottree_locate(device_handle_t device, fulfs_filesystem_t* fs, const char* path, bool* p_exist, inode_no_t* p_no)
 {
-    assert(path[0] != '/');
+    assert(path[0] == '/');
 
     return dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), path + 1, p_exist, p_no);
 }
@@ -625,6 +625,7 @@ static void dir_name(const char* path, char* dir)
 
             /* 绝对路径的情况下，/的上级还是/，/xxx 的上级是/ */
             if (is_abs && i == 0) {
+                dir[i + 1] = '\0';
                 return;
             } else {
                 dir[i] = '\0';

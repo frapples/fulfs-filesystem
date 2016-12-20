@@ -34,6 +34,7 @@ void fs_init(void)
 
 bool fs_mount(device_handle_t device, char drive_letter, int fs_type)
 {
+    drive_letter = tolower(drive_letter);
     if (!('a' <= drive_letter && drive_letter <= 'z')) {
         return false;
     }
@@ -50,7 +51,7 @@ bool fs_mount(device_handle_t device, char drive_letter, int fs_type)
         }
     }
 
-    if (g_device_filesystem[drive_letter - 'a'].fs_type != FS_TYPE_NULL) {
+    if (g_device_filesystem[drive_letter - 'a'].fs_type == FS_TYPE_NULL) {
         g_device_filesystem[drive_letter - 'a'].fs_type = fs_type;
         g_device_filesystem[drive_letter - 'a'].device = device;
         g_device_filesystem[drive_letter - 'a'].fs_ctrl = g_operate_functions[fs_type].filesystem_new(device);
@@ -90,7 +91,7 @@ static inline struct dev_fsctrl_s* path_to_ctrl(const char* path) {
 }
 
 
-#define FS_MAX_FILE_FD 2 >> 16
+#define FS_MAX_FILE_FD UINT16_MAX
 
 /* FIXME:似乎C语言全局数组默认就是NULL? 记不清楚了 */
 struct {
@@ -115,6 +116,7 @@ int fs_open(const char* path)
 
             g_fs_files[fd].file = file;
             g_fs_files[fd].drive_letter = path_drive_letter(path);
+            return fd;
         }
     }
     return FS_ERROR;
@@ -176,7 +178,7 @@ int fs_mkdir(const char* path)
     }
 
     struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->mkdir(ctrl->device, ctrl->fs_ctrl, path)) {
+    if (ctrl->opfuncs->mkdir(ctrl->device, ctrl->fs_ctrl, path_remain(path))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -190,7 +192,7 @@ int fs_rmdir(const char* path)
     }
 
     struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->rmdir(ctrl->device, ctrl->fs_ctrl, path)) {
+    if (ctrl->opfuncs->rmdir(ctrl->device, ctrl->fs_ctrl, path_remain(path))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -208,7 +210,7 @@ int fs_link(const char* src_path, const char* new_path)
     }
 
     struct dev_fsctrl_s* ctrl = path_to_ctrl(src_path);
-    if (ctrl->opfuncs->link(ctrl->device, ctrl->fs_ctrl, src_path, new_path)) {
+    if (ctrl->opfuncs->link(ctrl->device, ctrl->fs_ctrl, path_remain(src_path), path_remain(new_path))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -220,7 +222,7 @@ int fs_unlink(const char* path)
         return FS_ERROR;
     }
     struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->unlink(ctrl->device, ctrl->fs_ctrl, path)) {
+    if (ctrl->opfuncs->unlink(ctrl->device, ctrl->fs_ctrl, path_remain(path))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -238,7 +240,7 @@ int fs_symlink(const char* src_path, const char* new_path)
     }
 
     struct dev_fsctrl_s* ctrl = path_to_ctrl(src_path);
-    if (ctrl->opfuncs->symlink(ctrl->device, ctrl->fs_ctrl, src_path, new_path)) {
+    if (ctrl->opfuncs->symlink(ctrl->device, ctrl->fs_ctrl, path_remain(src_path), path_remain(new_path))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -250,7 +252,7 @@ int fs_readlink(const char *path, char *buf, size_t size)
         return FS_ERROR;
     }
     struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->readlink(ctrl->device, ctrl->fs_ctrl, path, buf, size)) {
+    if (ctrl->opfuncs->readlink(ctrl->device, ctrl->fs_ctrl, path_remain(path), buf, size)) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -265,7 +267,7 @@ int fs_stat(const char *path, struct fs_stat *buf)
         return FS_ERROR;
     }
     struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->stat(ctrl->device, ctrl->fs_ctrl, path, buf)) {
+    if (ctrl->opfuncs->stat(ctrl->device, ctrl->fs_ctrl, path_remain(path), buf)) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -287,7 +289,7 @@ FS_DIR* fs_opendir(const char *path)
 
 
     struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    fs_dir_t* dir = ctrl->opfuncs->opendir(ctrl->device, ctrl->fs_ctrl, path);
+    fs_dir_t* dir = ctrl->opfuncs->opendir(ctrl->device, ctrl->fs_ctrl, path_remain(path));
     if (dir == NULL) {
         return NULL;
     }

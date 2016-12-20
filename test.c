@@ -213,9 +213,12 @@ bool test_fs(void)
     TEST_ASSERT(fd != FS_ERROR);
     fs_close(fd);
 
+    TEST_ASSERT(fs_mkdir("A:/testdir") == FS_SUCCESS);
+
     fd = fs_open("A:/text3.txt");
     TEST_ASSERT(fd != FS_ERROR);
     fs_close(fd);
+
 
     FS_DIR* dir = fs_opendir("A:/");
     char name[30];
@@ -223,6 +226,16 @@ bool test_fs(void)
         fs_readdir(dir, name);
         printf("%s\n", name);
     }while (name[0] != '\0');
+    printf("\n");
+
+
+    TEST_ASSERT(fs_rmdir("A:/testdir") == FS_SUCCESS);
+    dir = fs_opendir("A:/");
+    do {
+        fs_readdir(dir, name);
+        printf("%s\n", name);
+    }while (name[0] != '\0');
+    printf("\n");
 
     fs_closedir(dir);
 
@@ -236,8 +249,8 @@ int main(int argc, char *argv[])
     srand(time(NULL));
 
     TestFunc funcs[] = {
-        test_device_io,
-        test_inode_io,
+        /* test_device_io, */
+        /* test_inode_io, */
         test_format,
         /* test_base_block_file, */
         /* test_base_file, */

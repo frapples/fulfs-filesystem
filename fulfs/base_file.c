@@ -152,8 +152,12 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
         }
 
         writed_count += should_write_size;
-        base_file->inode.size += should_write_size;
-        base_file_seek(base_file, base_file_tell(base_file) + should_write_size);
+
+        fsize_t will_pos = base_file_tell(base_file) + should_write_size;
+        if (will_pos > base_file_size(base_file)) {
+            base_file->inode.size = will_pos;
+        }
+        base_file_seek(base_file, will_pos);
     }
     return writed_count;
 }
@@ -242,8 +246,6 @@ bool base_file_truncate(base_file_t* base_file, fsize_t size)
 {
     /* 这个函数要保证出错时不破坏完整性 */
     if (base_file->inode.size > size) {
-
-        assert(base_file->inode.size > 0);
 
         int block_size = superblock_block_size(base_file->sb);
 

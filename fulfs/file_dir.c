@@ -145,18 +145,23 @@ bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
         return false;
     }
 
-    inode_no_t file_no;
-    if (!exist) {
-        bool success = base_file_create(device, &fs->sb, MODE_DIR, &file_no);
-        if (!success) {
-            return false;
-        }
 
-        success =  dir_add(device, fs, dir_no, name, file_no);
-        /* FIXME: 这里失败了应该要把新建立的文件删除 */
-        if (!success) {
-            return false;
-        }
+    /* 是否存在同名文件 */
+    inode_no_t file_no;
+    dir_locate(device, fs, dir_no, name, &exist, &file_no);
+    if (exist) {
+        return false;
+    }
+
+    success = base_file_create(device, &fs->sb, MODE_DIR, &file_no);
+    if (!success) {
+        return false;
+    }
+
+    success =  dir_add(device, fs, dir_no, name, file_no);
+    /* FIXME: 这里失败了应该要把新建立的文件删除 */
+    if (!success) {
+        return false;
     }
 
     return true;
@@ -164,10 +169,24 @@ bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
 
 bool fulfs_rmdir(device_handle_t device, fulfs_filesystem_t* fs, const char* path)
 {
+    char dir_path[FS_MAX_FILE_PATH];
+    char name[FILE_MAX_NAME];
+    dir_name(path, dir_path);
+    base_name(path, name);
+
+    /* 定位出目录所在的inode */
     bool exist;
-    inode_no_t dir_no;
-    bool success = dir_roottree_locate(device, fs, path, &exist, &dir_no);
+    inode_no_t parent_dir_no;
+    bool success = dir_roottree_locate(device, fs, dir_path, &exist, &parent_dir_no);
     if (!success) {
+        return false;
+    }
+
+
+    /* 是否存在同名文件 */
+    inode_no_t dir_no;
+    success = dir_locate(device, fs, parent_dir_no, name, &exist, &dir_no);
+    if (!success && !exist) {
         return false;
     }
 
@@ -178,9 +197,14 @@ bool fulfs_rmdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
     }
 
     bool is_dir = (base_file_mode(&base_file) == MODE_DIR);
+    bool is_empty = (base_file_size(&base_file) == 0);
     base_file_close(&base_file);
 
-    if (is_dir) {
+    if (is_dir && is_empty) {
+        success = dir_del(device, fs, parent_dir_no, name);
+        if (!success) {
+            return false;
+        }
         base_file_unref(device, &fs->sb, dir_no);
         return true;
     } else {
@@ -491,8 +515,8 @@ static bool dir_add(device_handle_t device, fulfs_filesystem_t* fs, inode_no_t d
     struct dir_item_s dir_item;
     strncpy(dir_item.name, name, DIR_ITEM_NAME_SIZE);
     dir_item.name[DIR_ITEM_NAME_SIZE] = '\0';
-    dir_item_dump_to_bin(&dir_item, buf);
     dir_item.inode_no = no;
+    dir_item_dump_to_bin(&dir_item, buf);
 
     base_file_seek(&base_file, base_file_size(&base_file));
 
@@ -589,12 +613,13 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
 
     int count = 0;
     for (const char* p = relative_path; *p != '\0'; p++) {
-        if (*p == '/') {
-            count = 0;
+        count++;
+
+        if (*(p + 1) == '/' || *(p + 1) == '\0') {
 
             bool exist;
             inode_no_t no;
-            strncpy(name, p - count, min_int(DIR_ITEM_NAME_SIZE, count));
+            strncpy(name, (p + 1) - count, min_int(DIR_ITEM_NAME_SIZE, count));
             bool success = dir_locate(device, fs, start, name, &exist, &no);
             if (!success) {
                 return false;
@@ -602,13 +627,12 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
 
             if (!exist) {
                 *p_exist = false;
-                return false;
+                return true;
             } else {
                 start = no;
             }
 
-        } else {
-            count++;
+            count = 0;
         }
     }
 

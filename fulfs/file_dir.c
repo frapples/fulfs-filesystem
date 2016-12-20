@@ -409,6 +409,13 @@ fulfs_dir_t* fulfs_opendir(device_handle_t device, fulfs_filesystem_t* fs, const
 
 bool fulfs_readdir(fulfs_dir_t* dir, char* name)
 {
+    assert(base_file_size(&dir->base_file) % DIR_ITEM_SIZE == 0);
+
+    if (base_file_tell(&dir->base_file) >= base_file_size(&dir->base_file)) {
+        name[0] = '\0';
+        return true;
+    }
+
     char buf[DIR_ITEM_SIZE];
     int count = base_file_read(&dir->base_file, buf, DIR_ITEM_SIZE);
     if (count != DIR_ITEM_SIZE) {

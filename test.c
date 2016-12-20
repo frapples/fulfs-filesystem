@@ -75,7 +75,11 @@ bool test_format(void)
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, &sb);
     inode_t inode;
-    for (inode_no_t i = 0; i < INODE_MAX_COUNT; i++) {
+
+    TEST_ASSERT(inode_load(&dev_inode_ctrl, 0, &inode));
+    TEST_ASSERT(inode.mode == MODE_DIR);
+
+    for (inode_no_t i = 1; i < INODE_MAX_COUNT; i++) {
         TEST_ASSERT(inode_load(&dev_inode_ctrl, i, &inode));
         TEST_ASSERT(inode.mode == 0);
     }
@@ -166,10 +170,22 @@ bool test_fs(void)
     TEST_ASSERT(fd != FS_ERROR);
     fs_close(fd);
 
+
+    fd = fs_open("A:/text2.txt");
+    TEST_ASSERT(fd != FS_ERROR);
+    fs_close(fd);
+
+    fd = fs_open("A:/text3.txt");
+    TEST_ASSERT(fd != FS_ERROR);
+    fs_close(fd);
+
     FS_DIR* dir = fs_opendir("A:/");
     char name[30];
-    fs_readdir(dir, name);
-    printf("%s\n", name);
+    do {
+        fs_readdir(dir, name);
+        printf("%s\n", name);
+    }while (name[0] != '\0');
+
     fs_closedir(dir);
 
 

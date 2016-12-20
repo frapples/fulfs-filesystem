@@ -3,6 +3,7 @@
 #include "inode.h"
 #include "superblock.h"
 #include "data_block.h"
+#include "base_file.h"
 
 #include "../utils/math.h"
 #include "../utils/log.h"
@@ -49,11 +50,23 @@ fulfs_errcode_t fulfs_format(device_handle_t device, int sectors_per_block)
         return FULFS_FAIL;
     }
 
-    superblock_t sb;
-    superblock_create(&sb, device_section_count(device), sectors_per_block,
-                      inode_table, data_block, data_block_free_stack);
+    /* 建立根目录 */
+    superblock_t temp_sb;
+    superblock_create(&temp_sb, device_section_count(device), sectors_per_block,
+                      inode_table, data_block, data_block_free_stack, 0);
+    inode_no_t root_dir;
+    success = base_file_create(device, &temp_sb, MODE_DIR, &root_dir);
+    if (!success) {
+        return FULFS_FAIL;
+    }
+
+
 
     /* 写入superblock */
+    superblock_t sb;
+    superblock_create(&sb, device_section_count(device), sectors_per_block,
+                      inode_table, data_block, data_block_free_stack, root_dir);
+
     if (!superblock_dump(device, &sb)) {
         log_debug("superblock写入失败: %d号设备", device);
         return FULFS_FAIL;

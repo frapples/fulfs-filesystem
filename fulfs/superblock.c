@@ -26,7 +26,7 @@ void superblock_load_from_bin(const char* bin, superblock_t* sb)
 }
 
 void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_block,
-                       block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack)
+                       block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack, inode_no_t root_inode)
 {
     sb->sectors = sectors;
     sb->sectors_per_block = sectors_per_block;
@@ -34,7 +34,7 @@ void superblock_create(superblock_t* sb, sector_no_t sectors, int sectors_per_bl
     sb->total_size = ((sb->sectors / sb->sectors_per_block) - data_block) * (BYTES_PER_SECTOR * sb->sectors_per_block);
     sb->used_size = 0;
 
-    sb->root_dir = 0;
+    sb->root_dir = root_inode;
     sb->inode_table_block = inode_table;
     sb->data_block = data_block;
     sb->data_block_free_stack = data_block_free_stack;

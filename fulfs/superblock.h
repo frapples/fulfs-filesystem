@@ -38,7 +38,7 @@ void superblock_load_from_bin(const char* bin, superblock_t* sb);
 
 /* 给一个新的文件系统初始化superblock */
 void superblock_create(superblock_t* sb,  sector_no_t sectors, int sectors_per_block,
-                       block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack);
+                       block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack, inode_no_t root_inode);
 
 
 /* 从磁盘加载superblock */

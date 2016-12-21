@@ -4,6 +4,7 @@
 #include "../utils/math.h"
 #include "../utils/log.h"
 #include "../memory/alloc.h"
+#include "../utils/path.h"
 #include <string.h>
 #include <assert.h>
 
@@ -29,8 +30,6 @@ static void dir_item_dump_to_bin(const struct dir_item_s* item, char* bin);
 
 /* -------------------- */
 
-static void dir_name(const char* path, char* dir);
-static void base_name(const char* path, char* name);
 
 static bool fulfs_file_init(fulfs_file_t* file, device_handle_t device, fulfs_filesystem_t* fs, const char* path);
 
@@ -47,8 +46,8 @@ static bool fulfs_file_init(fulfs_file_t* file, device_handle_t device, fulfs_fi
 {
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
-    dir_name(path, dir_path);
-    base_name(path, name);
+    path_dirname(path, dir_path);
+    path_basename(path, name, FILE_MAX_NAME);
 
     /* 定位出目录所在的inode */
     bool exist;
@@ -134,8 +133,8 @@ bool fulfs_mkdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
 {
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
-    dir_name(path, dir_path);
-    base_name(path, name);
+    path_dirname(path, dir_path);
+    path_basename(path, name, FILE_MAX_NAME);
 
     /* 定位出目录所在的inode */
     bool exist;
@@ -171,8 +170,8 @@ bool fulfs_rmdir(device_handle_t device, fulfs_filesystem_t* fs, const char* pat
 {
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
-    dir_name(path, dir_path);
-    base_name(path, name);
+    path_dirname(path, dir_path);
+    path_basename(path, name, FILE_MAX_NAME);
 
     /* 定位出目录所在的inode */
     bool exist;
@@ -246,8 +245,8 @@ bool fulfs_link(device_handle_t device, fulfs_filesystem_t* fs, const char* src_
     /* 创建硬链接 */
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
-    dir_name(src_path, dir_path);
-    base_name(src_path, name);
+    path_dirname(new_path, dir_path);
+    path_basename(new_path, name, FILE_MAX_NAME);
 
     inode_no_t dir_no;
     success = dir_roottree_locate(device, fs, dir_path, &exist, &dir_no);
@@ -271,8 +270,8 @@ bool fulfs_unlink(device_handle_t device, fulfs_filesystem_t* fs, const char* pa
 {
     char dir_path[FS_MAX_FILE_PATH];
     char name[FILE_MAX_NAME];
-    dir_name(path, dir_path);
-    base_name(path, name);
+    path_dirname(path, dir_path);
+    path_basename(path, name, FILE_MAX_NAME);
 
     bool exist;
     inode_no_t dir_no;
@@ -648,37 +647,3 @@ static bool dir_roottree_locate(device_handle_t device, fulfs_filesystem_t* fs, 
     return dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), path + 1, p_exist, p_no);
 }
 
-static void dir_name(const char* path, char* dir)
-{
-    strcpy(dir, path);
-    int size = strlen(path);
-
-    bool is_abs = (dir[0] == '/');
-
-    for (int i = size - 1; i >= 0; i--) {
-        if (dir[i] == '/') {
-
-            /* 绝对路径的情况下，/的上级还是/，/xxx 的上级是/ */
-            if (is_abs && i == 0) {
-                dir[i + 1] = '\0';
-                return;
-            } else {
-                dir[i] = '\0';
-                return;
-            }
-        }
-    }
-
-    /* 能走到这儿的肯定是相对路径 */
-    dir[0] = '\0';
-}
-
-static void base_name(const char* path, char* name)
-{
-    /* 暂时这样实现 */
-    char dir_path[FS_MAX_FILE_PATH];
-    dir_name(path, dir_path);
-
-    int dir_size = strlen(dir_path);
-    strncpy(name, path + dir_size, DIR_ITEM_NAME_SIZE);
-}

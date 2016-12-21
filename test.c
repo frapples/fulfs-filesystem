@@ -2,10 +2,12 @@
 #include<stdlib.h>
 #include<time.h>
 #include<stdbool.h>
+#include<string.h>
 
 #include "device_io.h"
 #include "utils/sys.h"
 #include "utils/testtools.h"
+#include "utils/path.h"
 #include "fulfs/filesystem.h"
 #include "fulfs/superblock.h"
 #include "fulfs/data_block.h"
@@ -76,6 +78,20 @@ bool test_inode_io(void)
     }
 
     device_del(device);
+    return true;
+}
+
+bool test_path(void)
+{
+    char path[FS_MAX_FILE_PATH];
+
+    strcpy(path, "C:/abc/.././dfj");
+    path_simplify(path);
+    TEST_ASSERT(strcmp(path, "C:/dfj") == 0);
+
+    strcpy(path, "C:/abc/def/../../dfj");
+    path_simplify(path);
+    TEST_ASSERT(strcmp(path, "C:/dfj") == 0);
     return true;
 }
 
@@ -250,6 +266,7 @@ int main(int argc, char *argv[])
     TestFunc funcs[] = {
         /* test_device_io, */
         /* test_inode_io, */
+        test_path,
         test_format,
         /* test_base_block_file, */
         /* test_base_file, */

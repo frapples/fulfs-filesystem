@@ -4,6 +4,7 @@
 #include "fulfs/fulfs.h"
 #include "memory/alloc.h"
 #include <ctype.h>
+#include <string.h>
 
 
 struct fs_operate_functions_s g_operate_functions[FS_TYPE_TOTAL];
@@ -101,21 +102,24 @@ struct {
 
 int fs_open(const char* path)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return FS_ERROR;
     }
 
     for (int fd = 0; fd < FS_MAX_FILE_FD; fd++) {
         if (g_fs_files[fd].file == NULL) {
-            struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
+            struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
 
-            fs_file_t* file = ctrl->opfuncs->open(ctrl->device, ctrl->fs_ctrl, path_remain(path));
+            fs_file_t* file = ctrl->opfuncs->open(ctrl->device, ctrl->fs_ctrl, path_remain(abspath));
             if (file == NULL) {
                 return FS_ERROR;
             }
 
             g_fs_files[fd].file = file;
-            g_fs_files[fd].drive_letter = path_drive_letter(path);
+            g_fs_files[fd].drive_letter = path_drive_letter(abspath);
             return fd;
         }
     }
@@ -173,12 +177,15 @@ fs_off_t fs_lseek(int fd, fs_off_t off, int where)
 
 int fs_mkdir(const char* path)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return FS_ERROR;
     }
 
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->mkdir(ctrl->device, ctrl->fs_ctrl, path_remain(path))) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
+    if (ctrl->opfuncs->mkdir(ctrl->device, ctrl->fs_ctrl, path_remain(abspath))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -187,12 +194,15 @@ int fs_mkdir(const char* path)
 
 int fs_rmdir(const char* path)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return FS_ERROR;
     }
 
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->rmdir(ctrl->device, ctrl->fs_ctrl, path_remain(path))) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
+    if (ctrl->opfuncs->rmdir(ctrl->device, ctrl->fs_ctrl, path_remain(abspath))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -201,16 +211,22 @@ int fs_rmdir(const char* path)
 
 int fs_link(const char* src_path, const char* new_path)
 {
-    if (!path_check(src_path) || !path_check(new_path)) {
+    char src_abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(src_path, src_abspath, FS_MAX_FILE_PATH);
+
+    char new_abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(new_path, new_abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(src_abspath) || !path_check(new_abspath)) {
         return FS_ERROR;
     }
 
-    if ((path_drive_letter(src_path)) != path_drive_letter(new_path)) {
+    if ((path_drive_letter(src_abspath)) != path_drive_letter(new_abspath)) {
         return FS_ERROR;
     }
 
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(src_path);
-    if (ctrl->opfuncs->link(ctrl->device, ctrl->fs_ctrl, path_remain(src_path), path_remain(new_path))) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(src_abspath);
+    if (ctrl->opfuncs->link(ctrl->device, ctrl->fs_ctrl, path_remain(src_abspath), path_remain(new_abspath))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -218,11 +234,14 @@ int fs_link(const char* src_path, const char* new_path)
 }
 int fs_unlink(const char* path)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return FS_ERROR;
     }
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->unlink(ctrl->device, ctrl->fs_ctrl, path_remain(path))) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
+    if (ctrl->opfuncs->unlink(ctrl->device, ctrl->fs_ctrl, path_remain(abspath))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -231,16 +250,22 @@ int fs_unlink(const char* path)
 
 int fs_symlink(const char* src_path, const char* new_path)
 {
-    if (!path_check(src_path) || !path_check(new_path)) {
+    char src_abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(src_path, src_abspath, FS_MAX_FILE_PATH);
+
+    char new_abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(new_path, new_abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(src_abspath) || !path_check(new_abspath)) {
         return FS_ERROR;
     }
 
-    if ((path_drive_letter(src_path)) != path_drive_letter(new_path)) {
+    if ((path_drive_letter(src_abspath)) != path_drive_letter(new_abspath)) {
         return FS_ERROR;
     }
 
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(src_path);
-    if (ctrl->opfuncs->symlink(ctrl->device, ctrl->fs_ctrl, path_remain(src_path), path_remain(new_path))) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(src_abspath);
+    if (ctrl->opfuncs->symlink(ctrl->device, ctrl->fs_ctrl, path_remain(src_abspath), path_remain(new_abspath))) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -248,11 +273,14 @@ int fs_symlink(const char* src_path, const char* new_path)
 }
 int fs_readlink(const char *path, char *buf, size_t size)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return FS_ERROR;
     }
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->readlink(ctrl->device, ctrl->fs_ctrl, path_remain(path), buf, size)) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
+    if (ctrl->opfuncs->readlink(ctrl->device, ctrl->fs_ctrl, path_remain(abspath), buf, size)) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -263,11 +291,14 @@ int fs_readlink(const char *path, char *buf, size_t size)
 
 int fs_stat(const char *path, struct fs_stat *buf)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return FS_ERROR;
     }
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    if (ctrl->opfuncs->stat(ctrl->device, ctrl->fs_ctrl, path_remain(path), buf)) {
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
+    if (ctrl->opfuncs->stat(ctrl->device, ctrl->fs_ctrl, path_remain(abspath), buf)) {
         return FS_SUCCESS;
     } else {
         return FS_ERROR;
@@ -283,20 +314,23 @@ struct _fs_dir_wrapper_s
 
 FS_DIR* fs_opendir(const char *path)
 {
-    if (!path_check(path)) {
+    char abspath[FS_MAX_FILE_PATH];
+    fs_abs_path(path, abspath, FS_MAX_FILE_PATH);
+
+    if (!path_check(abspath)) {
         return NULL;
     }
 
 
-    struct dev_fsctrl_s* ctrl = path_to_ctrl(path);
-    fs_dir_t* dir = ctrl->opfuncs->opendir(ctrl->device, ctrl->fs_ctrl, path_remain(path));
+    struct dev_fsctrl_s* ctrl = path_to_ctrl(abspath);
+    fs_dir_t* dir = ctrl->opfuncs->opendir(ctrl->device, ctrl->fs_ctrl, path_remain(abspath));
     if (dir == NULL) {
         return NULL;
     }
 
     FS_DIR* dir_wrapper = FT_NEW(FS_DIR, 1);
     dir_wrapper->dir = dir;
-    dir_wrapper->drive_letter = path_drive_letter(path);
+    dir_wrapper->drive_letter = path_drive_letter(abspath);
     return dir_wrapper;
 }
 
@@ -334,4 +368,51 @@ int fs_format(device_handle_t device, int sectors_per_block, int fs_type)
     } else {
         return FS_ERROR;
     }
+}
+
+char g_current_dir[FS_MAX_FILE_PATH] = "";
+
+char* fs_getcwd(char *buffer,size_t size)
+{
+    if (strlen(g_current_dir) <= 0 || size < 1) {
+        return NULL;
+    } else {
+        strncpy(buffer, g_current_dir, size - 1);
+    }
+    return buffer;
+}
+
+int fs_chdir(const char* path)
+{
+    struct fs_stat st;
+    if (fs_stat(path, &st) != FS_SUCCESS) {
+        return FS_ERROR;
+    }
+
+    if (st.st_mode != FS_S_IFDIR) {
+        return FS_ERROR;
+    }
+
+    char abspath[FS_MAX_FILE_PATH];
+    if (fs_abs_path(path, abspath, FS_MAX_FILE_PATH) == NULL) {
+        return FS_ERROR;
+    }
+
+    strncpy(g_current_dir, abspath, FS_MAX_FILE_PATH - 1);
+    return FS_SUCCESS;
+}
+
+char* fs_abs_path(const char* path, char* abs_path, size_t size)
+{
+    if (path[1] != ':') {
+        if (fs_getcwd(abs_path, size) == NULL) {
+            return NULL;
+        }
+
+        strncat(abs_path, "/", size - (strlen(abs_path) + 1) - 1);
+        strncat(abs_path, path, size - (strlen(abs_path) + 1) - 1);
+    } else {
+        strncpy(abs_path, path, size - 1);
+    }
+    return abs_path;
 }

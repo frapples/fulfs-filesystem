@@ -52,5 +52,9 @@ void fs_closedir(FS_DIR* dir);
 int fs_format(device_handle_t device, int sectors_per_block, int fs_type);
 
 
+/* 当前目录 */
+char* fs_getcwd(char* buffer,size_t size);
+int fs_chdir(const char* path);
 
+char* fs_abs_path(const char* path, char* abs_path, size_t size);
 #endif /* __FS__H__ */

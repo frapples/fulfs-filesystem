@@ -3,8 +3,11 @@
 #include "fs_def.h"
 #include "fulfs/fulfs.h"
 #include "memory/alloc.h"
+#include "utils/path.h"
 #include <ctype.h>
 #include <string.h>
+
+#include <assert.h>
 
 
 struct fs_operate_functions_s g_operate_functions[FS_TYPE_TOTAL];
@@ -416,6 +419,15 @@ char* fs_abs_path(const char* path, char* abs_path, size_t size)
         strncat(abs_path, path, size - (strlen(abs_path) + 1) - 1);
     } else {
         strncpy(abs_path, path, size - 1);
+    }
+
+    path_simplify(abs_path);
+
+    assert(abs_path[1] == ':');
+
+    if (abs_path[2] == '\0' ) {
+        abs_path[2] = '/';
+        abs_path[3] = '\0';
     }
     return abs_path;
 }

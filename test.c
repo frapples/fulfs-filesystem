@@ -5,6 +5,7 @@
 #include<string.h>
 
 #include "device_io.h"
+#include "datastruct/string.h"
 #include "utils/sys.h"
 #include "utils/testtools.h"
 #include "utils/path.h"
@@ -92,6 +93,17 @@ bool test_path(void)
     strcpy(path, "C:/abc/def/../../dfj");
     path_simplify(path);
     TEST_ASSERT(strcmp(path, "C:/dfj") == 0);
+
+    /* return true; */
+    const char* p = "fdfd hgjf fdie fd";
+    size_t size = 0;
+    while ((p = ft_string_split_next(p + size, " ", &size)) != NULL) {
+        char buf[32];
+        /* NOTE: strncpy的大坑 =_=*/
+        strncpy(buf, p, size);
+        buf[size] = '\0';
+        printf("%s %d\n", buf, (int)size);
+    }
     return true;
 }
 

@@ -161,6 +161,6 @@ int enter(void)
 
 
 
-    printf("******** 欢迎使用本文件系统shell！ ********\n");
+    printf("******** 欢迎使用fulfs文件系统shell！ ********\n");
     return shell_main();
 }

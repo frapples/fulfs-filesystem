@@ -94,7 +94,7 @@ bool test_path(void)
     path_simplify(path);
     TEST_ASSERT(strcmp(path, "C:/dfj") == 0);
 
-    /* return true; */
+    return true;
     const char* p = "fdfd hgjf fdie fd";
     size_t size = 0;
     while ((p = ft_string_split_next(p + size, " ", &size)) != NULL) {

@@ -381,6 +381,7 @@ char* fs_getcwd(char *buffer,size_t size)
         return NULL;
     } else {
         strncpy(buffer, g_current_dir, size - 1);
+        buffer[size - 1] = '\0';
     }
     return buffer;
 }
@@ -402,6 +403,7 @@ int fs_chdir(const char* path)
     }
 
     strncpy(g_current_dir, abspath, FS_MAX_FILE_PATH - 1);
+    g_current_dir[FS_MAX_FILE_PATH - 1] = '\0';
     return FS_SUCCESS;
 }
 
@@ -419,6 +421,7 @@ char* fs_abs_path(const char* path, char* abs_path, size_t size)
         strncat(abs_path, path, size - (strlen(abs_path) + 1) - 1);
     } else {
         strncpy(abs_path, path, size - 1);
+        abs_path[size - 1] = '\0';
     }
 
     path_simplify(abs_path);

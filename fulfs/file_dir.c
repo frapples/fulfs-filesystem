@@ -619,6 +619,7 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
             bool exist;
             inode_no_t no;
             strncpy(name, (p + 1) - count, min_int(DIR_ITEM_NAME_SIZE, count));
+            name[min_int(DIR_ITEM_NAME_SIZE, count)] = '\0';
             bool success = dir_locate(device, fs, start, name, &exist, &no);
             if (!success) {
                 return false;
@@ -631,6 +632,9 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
                 start = no;
             }
 
+            if (*(p + 1) == '/') {
+                p++;
+            }
             count = 0;
         }
     }

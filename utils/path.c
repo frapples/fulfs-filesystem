@@ -97,6 +97,7 @@ void path_basename(const char* path, char* name, size_t size)
 {
     const char* p_name = path_p_basename(path);
     strncpy(name, p_name, size);
+    name[size] = '\0';
 }
 
 const char* path_p_basename(const char* path)

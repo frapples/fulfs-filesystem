@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 
 int create(const char* path, size_t size)
 {
-    if (!ft_create_bin_file(path, size)) {
+    if (ft_create_bin_file(path, size)) {
         printf("创建容器文件%s成功，文件大小%d\n", path, (int)size);
         return ERROR;
     } else {
@@ -130,10 +130,11 @@ int enter(void)
 
     /* 挂载设备 */
     while (true) {
-        char drive_letter;
+        char buf[32];
         char path[FS_MAX_FILE_PATH];
-        int ret = fscanf(fp, "%c%s", &drive_letter, path);
-        if (ret == EOF) {
+        int ret = fscanf(fp, "%s%s", buf, path);
+        char drive_letter = buf[0];
+        if (ret == EOF || ret == 0) {
             break;
         }
 

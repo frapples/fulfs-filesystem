@@ -402,6 +402,7 @@ int fs_chdir(const char* path)
     return FS_SUCCESS;
 }
 
+/* FIXME: 目前对于带盘符的路径的一些约定有些混乱，先暂时这样吧 */
 char* fs_abs_path(const char* path, char* abs_path, size_t size)
 {
     if (path[1] != ':') {
@@ -409,7 +410,9 @@ char* fs_abs_path(const char* path, char* abs_path, size_t size)
             return NULL;
         }
 
-        strncat(abs_path, "/", size - (strlen(abs_path) + 1) - 1);
+        if (abs_path[strlen(abs_path) - 1] != '/') {
+            strncat(abs_path, "/", size - (strlen(abs_path) + 1) - 1);
+        }
         strncat(abs_path, path, size - (strlen(abs_path) + 1) - 1);
     } else {
         strncpy(abs_path, path, size - 1);

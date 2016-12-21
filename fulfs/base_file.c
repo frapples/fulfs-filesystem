@@ -277,10 +277,9 @@ int base_file_ref_count(base_file_t* base_file)
     return base_file->inode.link_count;
 }
 
-bool base_file_block_count(base_file_t* base_file, long* count)
+bool base_file_block_count(base_file_t* base_file, long* p_count)
 {
-    assert(false && "未实现");
-    return false;
+    return base_block_file_block_count(base_file->device, base_file->sb, &base_file->inode, p_count);
 }
 
 /*********************************/

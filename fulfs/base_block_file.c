@@ -229,6 +229,33 @@ static bool pop(device_handle_t device, int sectors_per_block, block_no_t data_b
     }
 }
 
+
+bool base_block_file_block_count(device_handle_t device, superblock_t* sb, inode_t* inode, long* p_count)
+{
+    /* 目前的block个数 */
+    block_no_t block_count = count_groups(inode->size, superblock_block_size(sb));
+
+    int blocknos_per_block = num_per_indirect(superblock_block_size(sb));
+    block_no_t level_0_max_block_count = (fsize_t)(LEVEL_0_INDIRECT_COUNT);
+    block_no_t level_1_max_block_count = level_0_max_block_count + blocknos_per_block;
+    block_no_t level_2_max_block_count = level_1_max_block_count + (blocknos_per_block * blocknos_per_block);
+    block_no_t level_3_max_block_count = level_2_max_block_count + (blocknos_per_block * blocknos_per_block * blocknos_per_block);
+
+    *p_count = block_count;
+    if (block_count < level_0_max_block_count) {
+        *p_count += 0;
+    } else if (block_count < level_1_max_block_count) {
+        *p_count += 1;
+    } else if (block_count < level_2_max_block_count) {
+        *p_count += 1 + count_groups(block_count - level_1_max_block_count, blocknos_per_block);
+    } else if (block_count < level_3_max_block_count) {
+        int indirect_3_count = count_groups(block_count - level_2_max_block_count, blocknos_per_block);
+        *p_count += 1 + count_groups(indirect_3_count, blocknos_per_block) + indirect_3_count;
+    } else {
+        assert(false);
+    }
+    return true;
+}
 /************************************************/
 /* NOTE: 简单实现，未考虑字节序 */
 static bool indirect_load(device_handle_t device, int sectors_per_block, block_no_t block, block_no_t blocks[])

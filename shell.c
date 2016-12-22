@@ -78,6 +78,7 @@ int cmd_dispath(const char* cmd, int argc, char* argv[])
         {"tree", cmd_tree},
         {"ln", cmd_ln},
         {"stat", cmd_stat},
+        {"cat", cmd_cat},
         {"createfile", cmd_createfile},
     };
 

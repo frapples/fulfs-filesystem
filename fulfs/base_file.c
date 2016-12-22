@@ -6,6 +6,7 @@
 #include "../utils/math.h"
 #include "../utils/log.h"
 #include <string.h>
+#include <time.h>
 
 #include <assert.h>
 
@@ -29,6 +30,8 @@ bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t
 
     base_file->current.current_block_relative = 0;
     base_file->current.current_offset = 0;
+
+    base_file->inode.accessed_time = time(NULL);
     return true;
 }
 
@@ -159,6 +162,8 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
         }
         base_file_seek(base_file, will_pos);
     }
+
+    base_file->inode.modified_time = time(NULL);
     return writed_count;
 }
 
@@ -188,6 +193,10 @@ bool base_file_create(device_handle_t device, superblock_t* sb, int mode, inode_
     inode.mode = mode;
     inode.size = 0;
     inode.link_count = 1;
+
+    inode.accessed_time = time(NULL);
+    inode.modified_time = time(NULL);
+    inode.created_time = time(NULL);
 
     success = inode_dump(&dev_inode_ctrl, *p_inode_no, &inode);
     if (!success) {
@@ -264,6 +273,8 @@ bool base_file_truncate(base_file_t* base_file, fsize_t size)
         }
 
         base_file->inode.size = size;
+
+        base_file->inode.modified_time = time(NULL);
         return true;
 
     } else {

@@ -28,6 +28,7 @@ int cmd_ln(int argc, char* argv[]);
 
 int cmd_stat(int argc, char* argv[]);
 
+int cmd_cat(int argc, char* argv[]);
 int cmd_createfile(int argc, char* argv[]);
 
 

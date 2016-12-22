@@ -392,6 +392,7 @@ bool fulfs_stat(device_handle_t device, fulfs_filesystem_t* fs, const char *path
         return false;
     }
     buf->st_blocks = blocks;
+    buf->st_blksize = superblock_block_size(&fs->sb);
     buf->st_atime = base_file_accessed_time(&base_file);
     buf->st_mtime = base_file_modified_time(&base_file);
     buf->st_ctime = base_file_created_time(&base_file);

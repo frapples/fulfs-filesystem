@@ -79,6 +79,12 @@ static bool tree(char* path, int* p_level)
     }
     printf("%s\n", path_p_basename(path));
 
+    struct fs_stat st;
+    fs_stat(path, &st);
+    if (st.st_mode != FS_S_IFDIR) {
+        return true;
+    }
+
     FS_DIR* dir = fs_opendir(path);
     char name[32];
 
@@ -91,8 +97,9 @@ static bool tree(char* path, int* p_level)
         (*p_level)--;
         path[tail] = '\0';
     }
+
     fs_closedir(dir);
-    return true;
+        return true;
 }
 
 int cmd_tree(int argc, char* argv[])
@@ -125,6 +132,44 @@ int cmd_createfile(int argc, char* argv[])
 
     int fd = fs_open(argv[0]);
     fs_write(fd, argv[1], strlen(argv[1]));
+    fs_close(fd);
+
+    return 0;
+}
+
+int cmd_cat(int argc, char* argv[])
+{
+    if (argc != 1) {
+        printf("参数错误！\n");
+        return -1;
+    }
+
+    struct fs_stat st;
+    int ret = fs_stat(argv[0], &st);
+    if(ret != FS_SUCCESS) {
+        printf("文件不存在！\n");
+        return -1;
+    }
+
+    if (st.st_mode != FS_S_IFREG) {
+        printf("不是普通文件！\n");
+        return -1;
+    }
+
+    char buf[1024];
+    int size = 1024;
+
+
+    int fd = fs_open(argv[0]);
+    while (true) {
+        int count = fs_read(fd, buf, size - 1);
+        buf[count] = '\0';
+        printf("%s", buf);
+        if (count != size - 1) {
+            break;
+        }
+    }
+    printf("\n");
     fs_close(fd);
 
     return 0;
@@ -217,8 +262,17 @@ int cmd_rmdir(int argc, char* argv[])
 
 int cmd_stat(int argc, char* argv[])
 {
+    if (argc != 1) {
+        printf("参数错误\n");
+        return -1;
+    }
+
 	struct fs_stat  st;
 	int ret = fs_stat(argv[0], &st);
+  if (ret != FS_SUCCESS) {
+      printf("此路径可能不存在\n");
+      return -1;
+  }
 	if (st.st_mode == FS_S_IFDIR){
 		printf("此文件是目录\n");
 	}
@@ -229,12 +283,20 @@ int cmd_stat(int argc, char* argv[])
 		printf("此文件为普通文件\n");
 	}
 	printf("硬连接数目：%d\n", (int)st.st_nlink);
-	printf("文件大小    %d\n", (int)st.st_size);
-	printf("块大小      %d\n", (int)st.st_blksize);
-	printf("块数        %d\n", (int)st.st_blocks);
-	printf("最后一次访问时间：    %d\n", (int)st.st_atime);
-	printf("最后一次修改时间：    %d\n", (int)st.st_mtime);
-	printf("创建时间：            %d\n", (int)st.st_ctime);
+	printf("文件大小：    %d\n", (int)st.st_size);
+	printf("块大小：      %d\n", (int)st.st_blksize);
+	printf("块数：        %d\n", (int)st.st_blocks);
+
+  char buf[32];
+  size_t size = 32;
+  strftime(buf, size, "%Y-%m-%d %H:%M:%S", localtime(&st.st_ctime));
+	printf("创建时间：            %s\n", buf);
+
+  strftime(buf, size, "%Y-%m-%d %H:%M:%S", localtime(&st.st_atime));
+	printf("最后一次访问时间：    %s\n", buf);
+
+  strftime(buf, size, "%Y-%m-%d %H:%M:%S", localtime(&st.st_mtime));
+	printf("最后一次修改时间：    %s\n", buf);
     return 0;
 }
 

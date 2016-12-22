@@ -76,6 +76,9 @@ int cmd_dispath(const char* cmd, int argc, char* argv[])
         {"mv", cmd_mv},
         {"rm", cmd_rm},
         {"tree", cmd_tree},
+        {"ln", cmd_ln},
+        {"stat", cmd_stat},
+        {"createfile", cmd_createfile},
     };
 
     for (size_t i = 0; i < sizeof(commands) / sizeof(*commands); i++) {

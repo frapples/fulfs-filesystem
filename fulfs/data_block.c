@@ -35,7 +35,9 @@ bool data_blocks_init(device_handle_t device, int sectors_per_block, block_no_t 
         bool is_end = (data_block_start + data_block_count - block) <= MAX_GROUP_COUNT;
 
         struct group_s group;
-        group.top =  is_end ? MAX_GROUP_COUNT : (data_block_start + data_block_count - block);
+        group.top =  is_end ? (data_block_start + data_block_count - block) : MAX_GROUP_COUNT;
+
+        assert(group.top <= MAX_GROUP_COUNT);
 
         for (int i = 0; i < group.top; i++) {
             group.free_block[i] = block + i;
@@ -69,6 +71,7 @@ bool data_block_alloc(device_handle_t device, int sectors_per_block, block_no_t 
     group_load(buf, &group);
 
     assert(group.top > 0);
+    assert(group.top <= MAX_GROUP_COUNT);
 
 
     if (group.top == 1) {

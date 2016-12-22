@@ -24,5 +24,12 @@ int cmd_rm(int argc, char* argv[]);
 
 int cmd_tree(int argc, char* argv[]);
 
+int cmd_ln(int argc, char* argv[]);
+
+int cmd_stat(int argc, char* argv[]);
+
+int cmd_createfile(int argc, char* argv[]);
+
+
 
 #endif /* __SHELL_COMMAND__H__ */

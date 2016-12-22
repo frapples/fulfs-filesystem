@@ -7,7 +7,7 @@
 #include"utils/log.h"
 
 struct _device_s{
-    const char* path;
+    char* path;
     FILE* fp;
     sector_no_t section_count;
 };
@@ -28,7 +28,10 @@ int device_add(const char* path)
     for (int i = 0; i < MAX_DEVICE_COUNT; i++) {
         if (device_handle[i] == NULL) {
             device_handle[i] = FT_NEW(struct _device_s, 1);
-            device_handle[i]->path = path;
+
+            device_handle[i]->path = FT_NEW(char, strlen(path) + 1);
+            strcpy(device_handle[i]->path, path);
+
             device_handle[i]->fp = fopen(path, "r+b");
             device_handle[i]->section_count = ft_filesize_from_fp(device_handle[i]->fp) /  BYTES_PER_SECTOR;
 
@@ -44,6 +47,7 @@ void device_del(device_handle_t handle)
 {
     if (handle < MAX_DEVICE_COUNT && handle >= 0 && device_handle[handle] != NULL) {
         fclose(device_handle[handle]->fp);
+        ft_free(device_handle[handle]->path);
         ft_free(device_handle[handle]);
         device_handle[handle] = NULL;
     }

@@ -181,7 +181,7 @@ int cmd_df(int argc, char* argv[])
     for (int i = 0; i <= 'z' - 'a'; i++) {
         struct dev_fsctrl_s ctrl;
         if (fs_dev_fs_ctrl(i + 'a', &ctrl)) {
-            printf("%c\t", i + 'a');
+            printf("%c\t", i + 'A');
             printf("%d\t", ctrl.device);
 
             printf("%s\t", ctrl.fs_type == FS_TYPE_FULFS ? "fulfs" : "未知");

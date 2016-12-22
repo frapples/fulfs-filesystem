@@ -62,7 +62,7 @@ bool data_blocks_init(device_handle_t device, int sectors_per_block, block_no_t 
     return true;
 }
 
-bool data_block_alloc(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_block)
+bool data_block_alloc(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_block, block_no_t* p_used_block_count)
 {
     char buf[MAX_BYTES_PER_BLOCK];
     block_read(device, sectors_per_block, data_blocks_stack, buf);
@@ -95,11 +95,11 @@ bool data_block_alloc(device_handle_t device, int sectors_per_block, block_no_t 
             return false;
         }
     }
-
+    *p_used_block_count += 1;
     return true;
 }
 
-bool data_block_free(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t block)
+bool data_block_free(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t block, block_no_t* p_used_block_count)
 {
     char buf[MAX_BYTES_PER_BLOCK];
     block_read(device, sectors_per_block, data_blocks_stack, buf);
@@ -127,5 +127,8 @@ bool data_block_free(device_handle_t device, int sectors_per_block, block_no_t d
         return false;
     }
 
+    assert(p_used_block_count > 0);
+
+    *p_used_block_count -= 1;
     return true;
 }

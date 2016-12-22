@@ -21,11 +21,15 @@ typedef struct {
     uint16_t sectors_per_block; /* 每个block占的扇区数 */
     sector_no_t sectors; /* 总的扇区数 */
     uint64_t total_size; /* 文件系统总大小 */
-    uint64_t used_size; /* 被使用的大小 */
+    // uint64_t used_size; /* 被使用的大小 */
     inode_no_t root_dir; /* 指向根目录的 inode */
     block_no_t inode_table_block; /* inode table 起始的 block 号 */
+    inode_no_t inode_total_count; /* inode table区总inode个数 */
     block_no_t data_block; /* data区的起始block号 */
     block_no_t data_block_free_stack; /* data block 的空闲管理相关 */
+
+    inode_no_t used_inode_count; /* 已经使用的inode节点个数 注：在base_file层，删除文件减1，创建文件加1 */
+    block_no_t used_data_block_count; /* 已经使用的data block块个数  注：在base_block_file层负责维护此变量 */
 }superblock_t;
 
 /* superblock的二进制表示的大小 */
@@ -38,7 +42,7 @@ void superblock_load_from_bin(const char* bin, superblock_t* sb);
 
 /* 给一个新的文件系统初始化superblock */
 void superblock_create(superblock_t* sb,  sector_no_t sectors, int sectors_per_block,
-                       block_no_t inode_table, block_no_t data_block, block_no_t data_block_free_stack, inode_no_t root_inode);
+                       block_no_t inode_table, inode_no_t inode_count, block_no_t data_block, block_no_t data_block_free_stack, inode_no_t root_inode);
 
 
 /* 从磁盘加载superblock */

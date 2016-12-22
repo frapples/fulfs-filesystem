@@ -14,9 +14,11 @@ static bool locate(device_handle_t device, int sectors_per_block, block_no_t fir
    level 是索引等级
    size 是当前的树有多少叶子
  */
-static bool add(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size, block_no_t* p_block);
+static bool add(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack,
+                block_no_t* p_first, int level, block_no_t size, block_no_t* p_block, block_no_t* p_used_block_count);
 /* 给这颗树剪叶子 */
-static bool pop(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size);
+static bool pop(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack,
+                block_no_t* p_first, int level, block_no_t size, block_no_t* p_used_block_count);
 
 
 #define MAX_NUM_PER_INDIRECT (MAX_BYTES_PER_BLOCK / sizeof(block_no_t))
@@ -65,15 +67,18 @@ bool base_block_file_push_block(device_handle_t device, superblock_t* sb, inode_
     int sectors_per_block = superblock_sectors_per_block(sb);
     block_no_t data_block_stack = superblock_data_block_free_stack(sb);
     if (block_count < level_0_max_block_count) {
-        bool success = data_block_alloc(device, sectors_per_block, data_block_stack, p_block);
+        bool success = data_block_alloc(device, sectors_per_block, data_block_stack, p_block, &sb->used_data_block_count);
         inode->blocks[block_count] = *p_block;
         return success;
     } else if (block_count < level_1_max_block_count) {
-        return add(device, sectors_per_block, data_block_stack, &inode->single_indirect_block, 1, block_count - level_0_max_block_count, p_block);
+        return add(device, sectors_per_block, data_block_stack,
+                   &inode->single_indirect_block, 1, block_count - level_0_max_block_count, p_block, &sb->used_data_block_count);
     } else if (block_count < level_2_max_block_count) {
-        return add(device, sectors_per_block, data_block_stack, &inode->double_indirect_block, 2, block_count - level_1_max_block_count, p_block);
+        return add(device, sectors_per_block, data_block_stack,
+                   &inode->double_indirect_block, 2, block_count - level_1_max_block_count, p_block, &sb->used_data_block_count);
     } else if (block_count < level_3_max_block_count) {
-        return add(device, sectors_per_block, data_block_stack, &inode->triple_indirect_block, 3, block_count - level_2_max_block_count, p_block);
+        return add(device, sectors_per_block, data_block_stack,
+                   &inode->triple_indirect_block, 3, block_count - level_2_max_block_count, p_block, &sb->used_data_block_count);
     } else {
         assert(false);
     }
@@ -97,14 +102,17 @@ bool base_block_file_pop_block(device_handle_t device, superblock_t* sb, inode_t
     block_no_t data_block_stack = superblock_data_block_free_stack(sb);
     if (block_count <= level_0_max_block_count) {
         block_no_t new_block;
-        data_block_free(device, sectors_per_block, data_block_stack, inode->blocks[block_count - 1]);
-        return data_block_alloc(device, sectors_per_block, data_block_stack, &new_block);
+        data_block_free(device, sectors_per_block, data_block_stack, inode->blocks[block_count - 1], &sb->used_data_block_count);
+        return data_block_alloc(device, sectors_per_block, data_block_stack, &new_block, &sb->used_data_block_count);
     } else if (block_count <= level_1_max_block_count) {
-        return pop(device, sectors_per_block, data_block_stack, &inode->single_indirect_block, 1, block_count - level_0_max_block_count);
+        return pop(device, sectors_per_block, data_block_stack,
+                   &inode->single_indirect_block, 1, block_count - level_0_max_block_count, &sb->used_data_block_count);
     } else if (block_count <= level_2_max_block_count) {
-        return pop(device, sectors_per_block, data_block_stack, &inode->double_indirect_block, 2, block_count - level_1_max_block_count);
+        return pop(device, sectors_per_block, data_block_stack,
+                   &inode->double_indirect_block, 2, block_count - level_1_max_block_count, &sb->used_data_block_count);
     } else if (block_count <= level_3_max_block_count) {
-        return pop(device, sectors_per_block, data_block_stack, &inode->triple_indirect_block, 3, block_count - level_2_max_block_count);
+        return pop(device, sectors_per_block, data_block_stack,
+                   &inode->triple_indirect_block, 3, block_count - level_2_max_block_count, &sb->used_data_block_count);
     } else {
         assert(false);
     }
@@ -141,10 +149,10 @@ static bool locate(device_handle_t device, int sectors_per_block, block_no_t fir
 }
 
 
-static bool add(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size, block_no_t* p_block)
+static bool add(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size, block_no_t* p_block, block_no_t* p_used_block_count)
 {
     if (level == 0) {
-        bool success = data_block_alloc(device, sectors_per_block, data_blocks_stack, p_block);
+        bool success = data_block_alloc(device, sectors_per_block, data_blocks_stack, p_block, p_used_block_count);
         if (!success) {
             return false;
         }
@@ -160,7 +168,7 @@ static bool add(device_handle_t device, int sectors_per_block, block_no_t data_b
         if (offset == 0) {
             /* 上一级没有空余了 */
             bool success = add(device, sectors_per_block, data_blocks_stack,
-                               p_first, level - 1, count_groups(size, blocknos_per_block), &block);
+                               p_first, level - 1, count_groups(size, blocknos_per_block), &block, p_used_block_count);
             if (!success) {
                 return false;
             }
@@ -180,7 +188,7 @@ static bool add(device_handle_t device, int sectors_per_block, block_no_t data_b
             return false;
         }
 
-        success = data_block_alloc(device, sectors_per_block, data_blocks_stack, &(blocks[offset]));
+        success = data_block_alloc(device, sectors_per_block, data_blocks_stack, &(blocks[offset]), p_used_block_count);
         if (!success) {
             return false;
         }
@@ -195,12 +203,12 @@ static bool add(device_handle_t device, int sectors_per_block, block_no_t data_b
 }
 
 
-static bool pop(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size)
+static bool pop(device_handle_t device, int sectors_per_block, block_no_t data_blocks_stack, block_no_t* p_first, int level, block_no_t size, block_no_t* p_used_block_count)
 {
     assert(size > 0);
 
     if (level == 0) {
-        return data_block_free(device, sectors_per_block, data_blocks_stack, *p_first);
+        return data_block_free(device, sectors_per_block, data_blocks_stack, *p_first, p_used_block_count);
     } else {
 
         int blocknos_per_block = num_per_indirect(sectors_per_block * BYTES_PER_SECTOR);
@@ -214,14 +222,14 @@ static bool pop(device_handle_t device, int sectors_per_block, block_no_t data_b
         }
 
         if (offset == 0) {
-            success = pop(device, sectors_per_block, data_blocks_stack, p_first, level - 1, (size - 1) / blocknos_per_block + 1);
+            success = pop(device, sectors_per_block, data_blocks_stack, p_first, level - 1, (size - 1) / blocknos_per_block + 1, p_used_block_count);
             if (!success) {
                 return false;
             }
         }
 
         /* FIXME:这里要是释放失败了，其实是很尴尬的事情，破坏了完整性 */
-        success = data_block_free(device, sectors_per_block, data_blocks_stack, *p_first);
+        success = data_block_free(device, sectors_per_block, data_blocks_stack, *p_first, p_used_block_count);
         if (!success) {
             return false;
         }

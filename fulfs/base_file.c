@@ -171,6 +171,11 @@ bool base_file_close(base_file_t* base_file)
 {
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, base_file->device, base_file->sb);
+
+    if (!superblock_dump(base_file->device, base_file->sb)) {
+        return false;
+    }
+
     return inode_dump(&(dev_inode_ctrl), base_file->inode_no, &(base_file->inode));
 }
 
@@ -198,6 +203,11 @@ bool base_file_create(device_handle_t device, superblock_t* sb, int mode, inode_
     inode.modified_time = time(NULL);
     inode.created_time = time(NULL);
 
+    sb->used_inode_count++;
+
+    if (!superblock_dump(device, sb)) {
+        return false;
+    }
     success = inode_dump(&dev_inode_ctrl, *p_inode_no, &inode);
     if (!success) {
         return false;
@@ -313,6 +323,8 @@ static bool base_file_del(device_handle_t device, superblock_t* sb, inode_no_t i
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
     inode_free(&dev_inode_ctrl, inode_no);
+
+    sb->used_inode_count--;
     return true;
 }
 

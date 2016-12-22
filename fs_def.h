@@ -26,6 +26,7 @@ enum {
 #define FS_S_IFLNK   (2 >> 2)
 
 struct fs_stat {
+    long      st_ino;
     int       st_nlink;     //连到该文件的硬连接数目，刚建立的文件值为1
     int st_mode;
     fs_off_t         st_size;      //文件字节数(文件大小)

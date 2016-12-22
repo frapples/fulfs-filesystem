@@ -282,7 +282,8 @@ int cmd_stat(int argc, char* argv[])
 	else if (st.st_mode == FS_S_IFREG){
 		printf("此文件为普通文件\n");
 	}
-	printf("硬连接数目：%d\n", (int)st.st_nlink);
+	printf("inode 编号：  %d\n", (int)st.st_ino);
+	printf("硬连接数目：  %d\n", (int)st.st_nlink);
 	printf("文件大小：    %d\n", (int)st.st_size);
 	printf("块大小：      %d\n", (int)st.st_blksize);
 	printf("块数：        %d\n", (int)st.st_blocks);

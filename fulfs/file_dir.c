@@ -384,6 +384,7 @@ bool fulfs_stat(device_handle_t device, fulfs_filesystem_t* fs, const char *path
         return true;
     }
 
+    buf->st_ino = no;
     buf->st_nlink = base_file_ref_count(&base_file);
     buf->st_size = base_file_size(&base_file);
     long blocks;

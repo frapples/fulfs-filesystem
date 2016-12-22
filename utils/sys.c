@@ -50,3 +50,37 @@ bool ft_create_bin_file(const char* path, size_t file_size)
     fclose(fp);
     return true;
 }
+
+char ft_human_size(size_t size, size_t* p_size)
+{
+    if (size > 1024) {
+        size /= 1024;
+    } else {
+        *p_size = size;
+        return 'B';
+    }
+
+    if (size > 1024) {
+        size /= 1024;
+    } else {
+        *p_size = size;
+        return 'K';
+    }
+
+    if (size > 1024) {
+        size /= 1024;
+    } else {
+        *p_size = size;
+        return 'M';
+    }
+
+    if (size > 1024) {
+        size /= 1024;
+    } else {
+        *p_size = size;
+        return 'G';
+    }
+
+    *p_size = size;
+    return 'T';
+}

@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include "utils/path.h"
+#include "utils/sys.h"
 /*
 int cmd_pwd(int argc, char* argv[])
 {
@@ -177,16 +178,21 @@ int cmd_cat(int argc, char* argv[])
 
 int cmd_df(int argc, char* argv[])
 {
-    printf("盘号\t\t设备号\t\t文件系统类型\t\t已用大小\t\t总大小\n");
+    printf("盘号\t设备号\t类型\t已用\t总共\n");
     for (int i = 0; i <= 'z' - 'a'; i++) {
         struct dev_fsctrl_s ctrl;
         if (fs_dev_fs_ctrl(i + 'a', &ctrl)) {
-            printf("%c\t\t", i + 'A');
-            printf("%d\t\t", ctrl.device);
+            printf("%c\t", i + 'A');
+            printf("%d\t", ctrl.device);
 
-            printf("%s\t\t", ctrl.fs_type == FS_TYPE_FULFS ? "fulfs" : "未知");
-            printf("%d\t\t", (int)fs_filesystem_used_size(i + 'a'));
-            printf("%d\t\t", (int)fs_filesystem_total_size(i + 'a'));
+            printf("%s\t", ctrl.fs_type == FS_TYPE_FULFS ? "fulfs" : "未知");
+
+            size_t size;
+            char sym = ft_human_size((size_t)fs_filesystem_used_size(i + 'a'), &size);
+            printf("%d%c\t", (int)size, sym);
+
+            sym = ft_human_size((size_t)fs_filesystem_total_size(i + 'a'), &size);
+            printf("%d%c\t", (int)size, sym);
 
             printf("\n");
         }

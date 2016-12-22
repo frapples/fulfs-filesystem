@@ -175,6 +175,22 @@ int cmd_cat(int argc, char* argv[])
     return 0;
 }
 
+int cmd_df(int argc, char* argv[])
+{
+    printf("盘号\t设备号\t文件系统类型\t\n");
+    for (int i = 0; i <= 'z' - 'a'; i++) {
+        struct dev_fsctrl_s ctrl;
+        if (fs_dev_fs_ctrl(i + 'a', &ctrl)) {
+            printf("%c\t", i + 'a');
+            printf("%d\t", ctrl.device);
+
+            printf("%s\t", ctrl.fs_type == FS_TYPE_FULFS ? "fulfs" : "未知");
+            printf("\n");
+        }
+    }
+    return 0;
+}
+
 /* 由大印编写 */
 int cmd_pwd(int argc, char* argv[])
 {

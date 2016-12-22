@@ -12,22 +12,15 @@
 
 struct fs_operate_functions_s g_operate_functions[FS_TYPE_TOTAL];
 
-/* 这个表记录了盘符到具体操作系统的记录 */
-struct dev_fsctrl_s{
-    int fs_type;
-    struct fs_operate_functions_s* opfuncs;
-    device_handle_t device;
-    fs_filesystem_t* fs_ctrl;
-};
 
-struct dev_fsctrl_s g_device_filesystem['z' - 'a'];
+struct dev_fsctrl_s g_device_filesystem['z' - 'a' + 1];
 
 
 void fs_init(void)
 {
     FS_OPERATE_FUNCTIONS_SET(g_operate_functions[FS_TYPE_FULFS], fulfs);
 
-    for (int i = 0; i < 'z' - 'a'; i++) {
+    for (int i = 0; i <= 'z' - 'a'; i++) {
         g_device_filesystem[i].fs_type = FS_TYPE_NULL;
     }
 }
@@ -48,7 +41,7 @@ bool fs_mount(device_handle_t device, char drive_letter, int fs_type)
     }
 
 
-    for (int i = 0; i < 'z' - 'a'; i++) {
+    for (int i = 0; i <= 'z' - 'a'; i++) {
         if (g_device_filesystem[i].fs_type != FS_TYPE_NULL &&
             g_device_filesystem[i].device == device) {
             return false;
@@ -60,6 +53,21 @@ bool fs_mount(device_handle_t device, char drive_letter, int fs_type)
         g_device_filesystem[drive_letter - 'a'].device = device;
         g_device_filesystem[drive_letter - 'a'].fs_ctrl = g_operate_functions[fs_type].filesystem_new(device);
         g_device_filesystem[drive_letter - 'a'].opfuncs = &g_operate_functions[fs_type];
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool fs_dev_fs_ctrl(char drive_letter, struct dev_fsctrl_s* ctrl)
+{
+    drive_letter = tolower(drive_letter);
+    if (!('a' <= drive_letter && drive_letter <= 'z')) {
+        return false;
+    }
+
+    if (g_device_filesystem[drive_letter- 'a'].fs_type != FS_TYPE_NULL) {
+        *ctrl = g_device_filesystem[drive_letter- 'a'];
         return true;
     } else {
         return false;

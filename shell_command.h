@@ -31,6 +31,8 @@ int cmd_stat(int argc, char* argv[]);
 int cmd_cat(int argc, char* argv[]);
 int cmd_createfile(int argc, char* argv[]);
 
+int cmd_df(int argc, char* argv[]);
+
 
 
 #endif /* __SHELL_COMMAND__H__ */

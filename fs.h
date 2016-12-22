@@ -59,6 +59,8 @@ void fs_closedir(FS_DIR* dir);
 
 /* 文件系统操作 */
 int fs_format(device_handle_t device, int sectors_per_block, int fs_type);
+fs_size_t fs_filesystem_used_size(char drive_letter);
+fs_size_t fs_filesystem_total_size(char drive_letter);
 
 
 /* 当前目录 */

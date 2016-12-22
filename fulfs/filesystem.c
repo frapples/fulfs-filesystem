@@ -93,3 +93,13 @@ fulfs_filesystem_t* fulfs_filesystem_new(device_handle_t device)
 
     return fs_ctrl;
 }
+
+fs_size_t fulfs_filesystem_used_size(fulfs_filesystem_t* fs)
+{
+    return superblock_used_size(&fs->sb);
+}
+
+fs_size_t fulfs_filesystem_total_size(fulfs_filesystem_t* fs)
+{
+    return superblock_total_size(&fs->sb);
+}

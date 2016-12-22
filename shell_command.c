@@ -177,14 +177,17 @@ int cmd_cat(int argc, char* argv[])
 
 int cmd_df(int argc, char* argv[])
 {
-    printf("盘号\t设备号\t文件系统类型\t\n");
+    printf("盘号\t\t设备号\t\t文件系统类型\t\t已用大小\t\t总大小\n");
     for (int i = 0; i <= 'z' - 'a'; i++) {
         struct dev_fsctrl_s ctrl;
         if (fs_dev_fs_ctrl(i + 'a', &ctrl)) {
-            printf("%c\t", i + 'A');
-            printf("%d\t", ctrl.device);
+            printf("%c\t\t", i + 'A');
+            printf("%d\t\t", ctrl.device);
 
-            printf("%s\t", ctrl.fs_type == FS_TYPE_FULFS ? "fulfs" : "未知");
+            printf("%s\t\t", ctrl.fs_type == FS_TYPE_FULFS ? "fulfs" : "未知");
+            printf("%d\t\t", (int)fs_filesystem_used_size(i + 'a'));
+            printf("%d\t\t", (int)fs_filesystem_total_size(i + 'a'));
+
             printf("\n");
         }
     }

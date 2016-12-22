@@ -80,8 +80,9 @@ uint64_t superblock_used_size(const superblock_t* sb)
     fsize_t inode_table_total_size = superblock_inode_table_blocksize(sb) * superblock_block_size(sb);
 
     /* 按比例计算 */
-    fsize_t inode_used_size = sb->used_inode_count / sb->inode_total_count * inode_table_total_size;
-    fsize_t data_block_used_size = (superblock_data_block_size(sb) - sb->used_data_block_count) * superblock_block_size(sb);
+    /* sb->used_inode_count / sb->inode_total_count * inode_table_total_size */
+    fsize_t inode_used_size = sb->used_inode_count  * inode_table_total_size / sb->inode_total_count;
+    fsize_t data_block_used_size = sb->used_data_block_count * superblock_block_size(sb);
 
     return inode_used_size + data_block_used_size;
 }

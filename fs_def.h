@@ -10,6 +10,7 @@
 /* 这里面定义的函数接口，所有的文件系统应该要遵循此接口 */
 
 typedef int64_t fs_off_t;
+typedef int64_t fs_size_t;
 #define FS_MAX_FILE_PATH 2048
 
 #define FS_ERROR -1
@@ -74,6 +75,9 @@ typedef bool (fs_closedir_f)(fs_dir_t* dir);
 /* 文件系统本身操作 */
 typedef bool (fs_format_f)(device_handle_t device, int sectors_per_block);
 
+typedef fs_size_t (fs_filesystem_used_size_f)(fs_filesystem_t* fs);
+typedef fs_size_t (fs_filesystem_total_size_f)(fs_filesystem_t* fs);
+
 /* 类似虚表的一个东西 */
 
 struct fs_operate_functions_s{
@@ -99,6 +103,8 @@ struct fs_operate_functions_s{
     fs_closedir_f* closedir;
 
     fs_format_f* format;
+    fs_filesystem_total_size_f* filesystem_total_size;
+    fs_filesystem_used_size_f* filesystem_used_size;
 };
 
 #define FS_OPERATE_FUNCTIONS_SET(var, type_name)                        \
@@ -120,7 +126,9 @@ struct fs_operate_functions_s{
         (var).readdir = (fs_readdir_f*)type_name##_readdir;             \
         (var).closedir = (fs_closedir_f*)type_name##_closedir;          \
         (var).filesystem_new = (fs_filesystem_new_f*)type_name##_filesystem_new; \
-        (var).format = (fs_format_f*)type_name##_format;                 \
+        (var).format = (fs_format_f*)type_name##_format;                \
+        (var).filesystem_total_size = (fs_filesystem_total_size_f*)type_name##_filesystem_total_size; \
+        (var).filesystem_used_size = (fs_filesystem_used_size_f*)type_name##_filesystem_used_size; \
                                                                         \
     } while(0);                                                         \
 

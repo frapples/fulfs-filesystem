@@ -381,6 +381,26 @@ int fs_format(device_handle_t device, int sectors_per_block, int fs_type)
     }
 }
 
+
+fs_size_t fs_filesystem_used_size(char drive_letter)
+{
+    struct dev_fsctrl_s ctrl;
+    if (fs_dev_fs_ctrl(drive_letter, &ctrl)) {
+        return ctrl.opfuncs->filesystem_used_size(ctrl.fs_ctrl);
+    } else {
+        return FS_ERROR;
+    }
+}
+fs_size_t fs_filesystem_total_size(char drive_letter)
+{
+    struct dev_fsctrl_s ctrl;
+    if (fs_dev_fs_ctrl(drive_letter, &ctrl)) {
+        return ctrl.opfuncs->filesystem_total_size(ctrl.fs_ctrl);
+    } else {
+        return FS_ERROR;
+    }
+}
+
 char g_current_dir[FS_MAX_FILE_PATH] = "";
 
 char* fs_getcwd(char *buffer,size_t size)

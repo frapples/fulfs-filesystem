@@ -1,5 +1,7 @@
 #include "shell_command.h"
 
+#include <string.h>
+#include "utils/path.h"
 int cmd_pwd(int argc, char* argv[])
 {
     char path[FS_MAX_FILE_PATH];
@@ -65,6 +67,43 @@ int cmd_mkdir(int argc, char* argv[])
         printf("建立失败\n");
         return -1;
     }
+}
+
+static bool tree(char* path, int* p_level)
+{
+    for (int i = 0; i < *p_level; i++) {
+            printf("   ");
+    }
+        printf("%s\n", path_p_basename(path));
+
+    FS_DIR* dir = fs_opendir(path);
+    char name[32];
+
+    while ((fs_readdir(dir, name), name[0] != '\0')) {
+        size_t tail = strlen(path);
+        path_join(path, FS_MAX_FILE_PATH, name);
+
+        (*p_level)++;
+        tree(path, p_level);
+        (*p_level)--;
+        path[tail] = '\0';
+    }
+    fs_closedir(dir);
+    return true;
+}
+
+int cmd_tree(int argc, char* argv[])
+{
+    char path[FS_MAX_FILE_PATH];
+    if (argc <= 0) {
+        fs_getcwd(path, FS_MAX_FILE_PATH);
+    } else {
+        strcpy(path, argv[0]);
+    }
+
+    int level = 0;
+    tree(path, &level);
+    return 0;
 }
 
 int cmd_rmdir(int argc, char* argv[])

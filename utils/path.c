@@ -114,3 +114,25 @@ const char* path_p_basename(const char* path)
     }
     return path;
 }
+
+char* path_join(char* path1, size_t size, const char* path)
+{
+    size_t top = 0;
+    while (path1[top] != '\0') {
+        top++;
+    }
+
+    if (top > 0  && path1[top - 1] != '/') {
+        if (top >= size) {
+            return path1;
+        }
+
+        path1[top] = '/';
+        top++;
+        path1[top + 1] = '\0';
+    }
+
+    strncpy(path1 + top, path, size - top - 1);
+    (path1 + top)[size - top - 1] = '\0';
+    return path1;
+}

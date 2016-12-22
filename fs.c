@@ -415,10 +415,8 @@ char* fs_abs_path(const char* path, char* abs_path, size_t size)
             return NULL;
         }
 
-        if (abs_path[strlen(abs_path) - 1] != '/') {
-            strncat(abs_path, "/", size - (strlen(abs_path) + 1) - 1);
-        }
-        strncat(abs_path, path, size - (strlen(abs_path) + 1) - 1);
+        path_join(abs_path, size, path);
+
     } else {
         strncpy(abs_path, path, size - 1);
         abs_path[size - 1] = '\0';

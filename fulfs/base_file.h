@@ -3,13 +3,13 @@
 
 /* 本文件系统底层中一切皆文件，这里是底层的文件 */
 
-#include "inode.h"
+#include "mem_inode.h"
 #include "superblock.h"
 
 typedef struct {
     device_handle_t device;
     inode_no_t inode_no;
-    inode_t inode;
+    mem_inode_t* mem_inode;
     superblock_t* sb;
 
     /* 储存内部指针的底层信息 */

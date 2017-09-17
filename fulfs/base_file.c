@@ -1,6 +1,5 @@
 #include "base_file.h"
 
-#include "inode.h"
 #include "block.h"
 #include "base_block_file.h"
 #include "../utils/math.h"
@@ -23,7 +22,7 @@ bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
     base_file->sb = sb;
-    bool success = inode_load(&dev_inode_ctrl, inode_no, &(base_file->inode));
+    bool success = mem_inode_get(&dev_inode_ctrl, inode_no, &(base_file->mem_inode));
     if (!success) {
         return false;
     }
@@ -31,38 +30,38 @@ bool base_file_open(base_file_t* base_file, device_handle_t device, superblock_t
     base_file->current.current_block_relative = 0;
     base_file->current.current_offset = 0;
 
-    base_file->inode.accessed_time = time(NULL);
+    base_file->mem_inode->inode.accessed_time = time(NULL);
     return true;
 }
 
 int base_file_mode(const base_file_t* base_file)
 {
-    return base_file->inode.mode;
+    return base_file->mem_inode->inode.mode;
 }
 
 fsize_t base_file_size(const base_file_t* base_file)
 {
-    return base_file->inode.size;
+    return base_file->mem_inode->inode.size;
 }
 
 timestamp_t base_file_accessed_time(const base_file_t* base_file)
 {
-    return base_file->inode.accessed_time;
+    return base_file->mem_inode->inode.accessed_time;
 }
 
 timestamp_t base_file_modified_time(const base_file_t* base_file)
 {
-    return base_file->inode.modified_time;
+    return base_file->mem_inode->inode.modified_time;
 }
 
 timestamp_t base_file_created_time(const base_file_t* base_file)
 {
-    return base_file->inode.created_time;
+    return base_file->mem_inode->inode.created_time;
 }
 
 bool base_file_seek(base_file_t* base_file, fsize_t offset)
 {
-    assert(offset <= base_file->inode.size);
+    assert(offset <= base_file->mem_inode->inode.size);
 
     block_no_t block_relative = offset / superblock_block_size(base_file->sb);
     base_file->current.current_block_relative = block_relative;
@@ -89,7 +88,7 @@ int base_file_read(base_file_t* base_file, char* buf, int count)
     int readed_count = 0;
     while (readed_count < count) {
         block_no_t current_block;
-        bool success = base_block_file_locate(base_file->device, base_file->sb, &base_file->inode,
+        bool success = base_block_file_locate(base_file->device, base_file->sb, &(base_file->mem_inode->inode),
                                               base_file->current.current_block_relative, &current_block);
         if (!success) {
             log_debug("定位文件block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->device,
@@ -124,14 +123,15 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
 
         block_no_t current_block;
         if (base_file->current.current_block_relative >= count_groups(base_file_size(base_file), sectors_per_block * BYTES_PER_SECTOR)) {
-            bool success = base_block_file_push_block(base_file->device, base_file->sb, &base_file->inode, &current_block);
+            bool success = base_block_file_push_block(base_file->device, base_file->sb, &base_file->mem_inode->inode, &current_block);
             if (!success) {
                 log_debug("分配新block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->device,
                           base_file->inode_no, base_file->current.current_block_relative);
                 return writed_count;
             }
         } else {
-            bool success = base_block_file_locate(base_file->device, base_file->sb, &base_file->inode, base_file->current.current_block_relative, &current_block);
+            bool success = base_block_file_locate(base_file->device, base_file->sb, &base_file->mem_inode->inode,
+                                                  base_file->current.current_block_relative, &current_block);
             if (!success) {
                 log_debug("定位文件block失败: %d号设备, 文件inode号%d, 相对块号%d\n", base_file->device,
                           base_file->inode_no, base_file->current.current_block_relative);
@@ -158,12 +158,12 @@ int base_file_write(base_file_t* base_file, const char* buf, int count)
 
         fsize_t will_pos = base_file_tell(base_file) + should_write_size;
         if (will_pos > base_file_size(base_file)) {
-            base_file->inode.size = will_pos;
+            base_file->mem_inode->inode.size = will_pos;
         }
         base_file_seek(base_file, will_pos);
     }
 
-    base_file->inode.modified_time = time(NULL);
+    base_file->mem_inode->inode.modified_time = time(NULL);
     return writed_count;
 }
 
@@ -176,7 +176,7 @@ bool base_file_close(base_file_t* base_file)
         return false;
     }
 
-    return inode_dump(&(dev_inode_ctrl), base_file->inode_no, &(base_file->inode));
+    return mem_inode_put(&dev_inode_ctrl, base_file->mem_inode);
 }
 
 bool base_file_create(device_handle_t device, superblock_t* sb, int mode, inode_no_t* p_inode_no)
@@ -221,20 +221,15 @@ bool base_file_ref(device_handle_t device, superblock_t* sb, inode_no_t inode_no
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
 
-    inode_t inode;
-    bool success = inode_load(&dev_inode_ctrl, inode_no, &inode);
+    mem_inode_t* mem_inode;
+    bool success = mem_inode_get(&dev_inode_ctrl, inode_no, &mem_inode);
     if (!success) {
         return false;
     }
 
-    inode.link_count++;
+    mem_inode->inode.link_count++;
 
-    success = inode_dump(&dev_inode_ctrl, inode_no, &inode);
-    if (!success) {
-        return false;
-    }
-
-    return true;
+    return mem_inode_put(&dev_inode_ctrl, mem_inode);
 }
 
 bool base_file_unref(device_handle_t device, superblock_t* sb, inode_no_t inode_no)
@@ -242,49 +237,44 @@ bool base_file_unref(device_handle_t device, superblock_t* sb, inode_no_t inode_
     dev_inode_ctrl_t dev_inode_ctrl;
     dev_inode_ctrl_init_from_superblock(&dev_inode_ctrl, device, sb);
 
-    inode_t inode;
-    bool success = inode_load(&dev_inode_ctrl, inode_no, &inode);
+    mem_inode_t* mem_inode;
+    bool success = mem_inode_get(&dev_inode_ctrl, inode_no, &mem_inode);
     if (!success) {
         return false;
     }
 
-    inode.link_count--;
-    if (inode.link_count > 0) {
-        success = inode_dump(&dev_inode_ctrl, inode_no, &inode);
-        if (!success) {
-            return false;
-        }
+    mem_inode->inode.link_count--;
+    if (mem_inode->inode.link_count > 0) {
+        return mem_inode_put(&dev_inode_ctrl, mem_inode);
     } else {
         return base_file_del(device, sb, inode_no);
     }
-
-    return true;
 }
 
 bool base_file_truncate(base_file_t* base_file, fsize_t size)
 {
     /* 这个函数要保证出错时不破坏完整性 */
-    if (base_file->inode.size > size) {
+    if (base_file->mem_inode->inode.size > size) {
 
         int block_size = superblock_block_size(base_file->sb);
 
-        block_no_t block_num = count_groups(base_file->inode.size, block_size);
+        block_no_t block_num = count_groups(base_file->mem_inode->inode.size, block_size);
         block_no_t should_block_num = count_groups(size, block_size);
 
         for (block_no_t i = 0; i < block_num - should_block_num; i++) {
 
             /* 那么，完整性的责任转由这个函数保证 */
-            bool success = base_block_file_pop_block(base_file->device, base_file->sb, &(base_file->inode));
+            bool success = base_block_file_pop_block(base_file->device, base_file->sb, &(base_file->mem_inode->inode));
             if (!success) {
                 return false;
             }
 
-            base_file->inode.size -= block_size;
+            base_file->mem_inode->inode.size -= block_size;
         }
 
-        base_file->inode.size = size;
+        base_file->mem_inode->inode.size = size;
 
-        base_file->inode.modified_time = time(NULL);
+        base_file->mem_inode->inode.modified_time = time(NULL);
         return true;
 
     } else {
@@ -295,12 +285,12 @@ bool base_file_truncate(base_file_t* base_file, fsize_t size)
 
 int base_file_ref_count(base_file_t* base_file)
 {
-    return base_file->inode.link_count;
+    return base_file->mem_inode->inode.link_count;
 }
 
 bool base_file_block_count(base_file_t* base_file, long* p_count)
 {
-    return base_block_file_block_count(base_file->device, base_file->sb, &base_file->inode, p_count);
+    return base_block_file_block_count(base_file->device, base_file->sb, &base_file->mem_inode->inode, p_count);
 }
 
 /*********************************/

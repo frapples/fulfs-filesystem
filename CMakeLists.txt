@@ -9,10 +9,9 @@ set(CMAKE_C_FLAGS_RELEASE "$ENV{CFLAGS} -O3 -Wall -std=c99")
 SET(LIB_LIST memory/alloc.c utils/sys.c utils/testtools.c utils/log.c utils/path.c datastruct/string.c
   shell.c shell_command.c
   fs.c
-  fulfs/filesystem.c fulfs/file_dir.c
-  fulfs/base_file.c fulfs/base_block_file.c
-  fulfs/superblock.c fulfs/inode.c fulfs/data_block.c
   device_io.c)
+
+aux_source_directory("fulfs/" FULFS_SRCS)
 
 
 
@@ -21,10 +20,10 @@ MESSAGE(STATUS "This is SOURCE dir" ${PROJECT_SOURCE_DIR})
 
 
 # 相关的源文件是SRC_LIST中定义的源文件列表
-ADD_EXECUTABLE(main main.c ${LIB_LIST})
+ADD_EXECUTABLE(main main.c ${LIB_LIST} ${FULFS_SRCS})
 
 
 # 测试
 ENABLE_TESTING()
-ADD_EXECUTABLE(my_test test.c ${LIB_LIST})
+ADD_EXECUTABLE(my_test test.c ${LIB_LIST} ${FULFS_SRCS})
 ADD_TEST(my_test my_test)

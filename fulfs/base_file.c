@@ -1,5 +1,6 @@
 #include "base_file.h"
 
+#include "mem_inode.h"
 #include "block.h"
 #include "base_block_file.h"
 #include "../utils/math.h"

@@ -347,13 +347,12 @@ int cmd_cp(int argc, char* argv[])
             printf("操作失败！\n");
             return 0;
         }
-        int returnNumber = 100;
-        int readNumber = 100;
-        char *buf;
-        while(returnNumber == readNumber)
+        char buf[1024];
+        int c = fs_read(sourceFile, buf, sizeof(buf) - 1);
+        while(c > 0)
         {
-            returnNumber = fs_read(sourceFile, buf, readNumber);
-            fs_write(targetFile,buf,returnNumber);
+            fs_write(targetFile, buf, c);
+            c = fs_read(sourceFile, buf, sizeof(buf) - 1);
         }
 
         fs_close(sourceFile);

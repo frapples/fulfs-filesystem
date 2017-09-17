@@ -301,12 +301,19 @@ static bool base_file_del(device_handle_t device, superblock_t* sb, inode_no_t i
     if (!success) {
         return false;
     }
+
+    bool has_fp = base_file.mem_inode->ref_count > 0;
+
     /* 释放block */
     success = base_file_truncate(&base_file, 0);
     if (!success) {
         return false;
     }
     base_file_close(&base_file);
+
+    if (!has_fp) {
+        return false;
+    }
 
 
     /* 释放inode */

@@ -648,8 +648,9 @@ static bool dir_tree_locate(device_handle_t device, fulfs_filesystem_t* fs, inod
 
 static bool dir_roottree_locate(device_handle_t device, fulfs_filesystem_t* fs, const char* path, bool* p_exist, inode_no_t* p_no)
 {
-    assert(path[0] == '/');
+    assert(path[0] == '/' || path[0] == '\0');
+    const char* relative_path = path[0] == '/' ? path + 1 : path;
 
-    return dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), path + 1, p_exist, p_no);
+    return dir_tree_locate(device, fs, superblock_root_dir_inode(&fs->sb), relative_path, p_exist, p_no);
 }
 

@@ -1,3 +1,5 @@
+[[https://github.com/frapples/fulfs-filesystem/blob/master/documents.md][课程设计报告与程序设计文档]]
+
 * 简单介绍
 这是我的操作系统课程设计。题目是要求实现类 unix 文件系统，并且：
   - 采用索引节点储存文件系统。根据课本的解释，索引节点储存另外文件控制块 FCB 中除文件名之外的内容。
